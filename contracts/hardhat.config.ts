@@ -36,6 +36,13 @@ const config: HardhatUserConfig = {
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
+    flowTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: "https://testnet.evm.nodes.onflow.org",
+      chainId: 545,
+      accounts: [configVariable("FLOW_TESTNET_PRIVATE_KEY")],
+    },
   },
 };
 
