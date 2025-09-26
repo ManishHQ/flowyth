@@ -17,7 +17,16 @@
     "next-themes": "^0.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "@dynamic-labs/sdk-react-core": "^4",
+    "viem": "^2.28.0",
+    "@dynamic-labs/wagmi-connector": "^4",
+    "@tanstack/react-query": "^5.74.4",
+    "wagmi": "^2.15.0",
+    "@dynamic-labs/ethereum": "^4",
+    "crypto-browserify": "^3.12.0",
+    "stream-browserify": "^3.0.0",
+    "process": "^0.11.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
