@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-9f2c019853e2c003dede0c52a98565ad99ac0467",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/MockUSDC.sol": "project/contracts/MockUSDC.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/MockUSDC.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ncontract MockUSDC {\n    string public name = \"Mock USDC\";\n    string public symbol = \"mUSDC\";\n    uint8 public decimals = 6;\n    uint256 public totalSupply;\n\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n\n    event Transfer(address indexed from, address indexed to, uint256 value);\n    event Approval(address indexed owner, address indexed spender, uint256 value);\n\n    constructor() {\n        // Mint 1 million Mock USDC to deployer for testing\n        uint256 initialSupply = 1_000_000 * 10**decimals;\n        balanceOf[msg.sender] = initialSupply;\n        totalSupply = initialSupply;\n        emit Transfer(address(0), msg.sender, initialSupply);\n    }\n\n    function transfer(address to, uint256 amount) external returns (bool) {\n        require(balanceOf[msg.sender] >= amount, \"Insufficient balance\");\n\n        balanceOf[msg.sender] -= amount;\n        balanceOf[to] += amount;\n\n        emit Transfer(msg.sender, to, amount);\n        return true;\n    }\n\n    function transferFrom(address from, address to, uint256 amount) external returns (bool) {\n        require(balanceOf[from] >= amount, \"Insufficient balance\");\n        require(allowance[from][msg.sender] >= amount, \"Insufficient allowance\");\n\n        balanceOf[from] -= amount;\n        balanceOf[to] += amount;\n        allowance[from][msg.sender] -= amount;\n\n        emit Transfer(from, to, amount);\n        return true;\n    }\n\n    function approve(address spender, uint256 amount) external returns (bool) {\n        allowance[msg.sender][spender] = amount;\n        emit Approval(msg.sender, spender, amount);\n        return true;\n    }\n\n    // Helper function for testing - allows anyone to mint USDC\n    function mint(address to, uint256 amount) external {\n        balanceOf[to] += amount;\n        totalSupply += amount;\n        emit Transfer(address(0), to, amount);\n    }\n\n    // Helper function for testing - get free USDC\n    function faucet() external {\n        uint256 faucetAmount = 1000 * 10**decimals; // 1000 USDC\n        balanceOf[msg.sender] += faucetAmount;\n        totalSupply += faucetAmount;\n        emit Transfer(address(0), msg.sender, faucetAmount);\n    }\n}"
+      }
+    }
+  }
+}
