@@ -25,6 +25,10 @@ export function SquadFormation({ onSquadChange, onSquadValid, disabled = false }
   const validateSquad = (squad: string[]) => {
     if (squad.some(id => !id)) return false;
 
+    // Check for duplicates
+    const uniqueIds = new Set(squad);
+    if (uniqueIds.size !== squad.length) return false;
+
     const positionCounts = { [Position.GOALKEEPER]: 0, [Position.DEFENDER]: 0, [Position.MIDFIELDER]: 0, [Position.STRIKER]: 0 };
 
     for (const cryptoId of squad) {
@@ -125,19 +129,25 @@ export function SquadFormation({ onSquadChange, onSquadValid, disabled = false }
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {CRYPTO_ASSETS[position].map((crypto) => (
-                      <Button
-                        key={crypto.id}
-                        variant={selectedSquad[slotIndex] === crypto.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleCryptoSelect(crypto.id, slotIndex)}
-                        disabled={disabled}
-                        className="justify-start"
-                      >
-                        <span className="font-semibold">{crypto.symbol}</span>
-                        <span className="ml-1 text-xs opacity-70">{crypto.name}</span>
-                      </Button>
-                    ))}
+                    {CRYPTO_ASSETS[position].map((crypto) => {
+                      const isSelected = selectedSquad[slotIndex] === crypto.id;
+                      const isUsedElsewhere = selectedSquad.includes(crypto.id) && !isSelected;
+
+                      return (
+                        <Button
+                          key={crypto.id}
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleCryptoSelect(crypto.id, slotIndex)}
+                          disabled={disabled || isUsedElsewhere}
+                          className="justify-start"
+                        >
+                          <span className="font-semibold">{crypto.symbol}</span>
+                          <span className="ml-1 text-xs opacity-70">{crypto.name}</span>
+                          {isUsedElsewhere && <span className="ml-1 text-xs">✓</span>}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               );

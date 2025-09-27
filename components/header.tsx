@@ -7,14 +7,19 @@ import { HamburgerMenu } from "./hamburger-menu";
 
 export default function Header() {
   const navItems = (
-    <Button variant="link" asChild>
-      <Link href="/methods">Methods</Link>
-    </Button>
+    <>
+      <Button variant="link" asChild>
+        <Link href="/methods">Methods</Link>
+      </Button>
+      <Button variant="link" asChild>
+        <Link href="/tournaments">Tournaments</Link>
+      </Button>
+    </>
   );
 
   return (
     <div
-      className={"absolute top-0 flex items-center justify-between w-full py-2"}
+      className={"absolute top-0 flex items-center justify-between w-full py-2 z-50 bg-background/80 backdrop-blur-sm border-b border-border/50"}
     >
       <div className="pl-4 h-[40px] flex items-center">
         <Link href="/">
