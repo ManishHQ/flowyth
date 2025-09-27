@@ -1,7 +1,6 @@
 import { Address } from 'viem';
 
-// TODO: Update this with the new contract address after deployment
-export const CRYPTO_FANTASY_LEAGUE_ADDRESS: Address = '0xA55877A91f6cEB140901c2a1541Bcd1cef3116d7';
+export const CRYPTO_FANTASY_LEAGUE_ADDRESS: Address = '0x278d970D518F2c9199897cbBCa0d6f2B4C2712Ea';
 
 export const CRYPTO_FANTASY_LEAGUE_ABI = [
   {

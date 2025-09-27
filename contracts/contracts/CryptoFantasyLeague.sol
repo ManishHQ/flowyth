@@ -97,7 +97,7 @@ contract CryptoFantasyLeague {
 
         // Defenders (Blue Chips) - 5x multiplier
         _addCryptoAsset(0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43, "BTC", Position.DEFENDER, 50000);
-        _addCryptoAsset(0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace, "ETH", Position.DEFENDER, 50000);
+        _addCryptoAsset(0x0000000000000000000000000000000000000000000000000000000000000001, "ETH", Position.DEFENDER, 50000);
 
         // Midfielders (Altcoins) - 3x multiplier
         _addCryptoAsset(0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d, "SOL", Position.MIDFIELDER, 30000);
@@ -109,8 +109,8 @@ contract CryptoFantasyLeague {
 
         // Strikers (Meme Coins) - 1x multiplier
         _addCryptoAsset(0xdcef50dd0a4cd2dcc17e45df1676dcb336a11a61c69df7a0299b0150c672d25c, "DOGE", Position.STRIKER, 10000);
-        _addCryptoAsset(0xf0d57deca57b3da2fe63a493f4c25925fdfd8edf834b20f93e1f84dbd1504d4a, "SHIB", Position.STRIKER, 10000);
-        _addCryptoAsset(0xd69731a2e74ac1ce884fc3890f7ee324b6deb66147055249568869ed700882e4, "PEPE", Position.STRIKER, 10000);
+        _addCryptoAsset(0x0000000000000000000000000000000000000000000000000000000000000002, "SHIB", Position.STRIKER, 10000);
+        _addCryptoAsset(0x0000000000000000000000000000000000000000000000000000000000000003, "PEPE", Position.STRIKER, 10000);
     }
 
     function _addCryptoAsset(bytes32 pythId, string memory symbol, Position position, uint256 multiplier) private {
@@ -166,6 +166,13 @@ contract CryptoFantasyLeague {
     }
 
     function _isValidSquad(bytes32[6] calldata cryptoIds) private view returns (bool) {
+        // Check for duplicates first
+        for (uint256 i = 0; i < 6; i++) {
+            for (uint256 j = i + 1; j < 6; j++) {
+                if (cryptoIds[i] == cryptoIds[j]) return false;
+            }
+        }
+
         // Check squad formation: 1 GK, 2 DEF, 2 MID, 1 STR
         uint256[4] memory positionCounts;
 
