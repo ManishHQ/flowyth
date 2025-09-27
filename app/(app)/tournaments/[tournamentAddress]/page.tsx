@@ -547,22 +547,19 @@ export default function TournamentDetailPage() {
               {/* Field Container */}
               <div className="relative w-full max-w-sm h-full bg-gradient-to-b from-green-400 to-green-500 rounded-3xl shadow-2xl border-4 border-white/30 overflow-hidden">
                 {/* Field Lines */}
-                <div className="absolute inset-0">
-                  {/* Grass texture overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-300/20 to-green-600/20" />
+ {/* Field Lines */}
+ <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-300/20 to-green-600/20" />
 
-                  {/* Outer field border */}
-                  <div className="absolute inset-3 border-3 border-white/80 rounded-xl shadow-lg" />
+          <div className="absolute inset-3 border-3 border-white/80 rounded-xl shadow-lg" />
+          <div className="absolute top-1/2 left-1/2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 border-3 border-white/90 rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+          <div className="absolute top-1/2 left-3 right-3 h-1 bg-white/90 -translate-y-0.5 shadow-sm" />
 
-                  {/* Center Circle */}
-                  <div className="absolute top-1/2 left-1/2 w-16 h-16 border-3 border-white/90 rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+          <div className="absolute top-3 left-1/2 w-16 h-12 sm:w-20 sm:h-16 md:w-24 md:h-20 border-3 border-white/90 border-t-0 -translate-x-1/2 bg-green-300/40 shadow-lg" />
+          <div className="absolute bottom-3 left-1/2 w-16 h-12 sm:w-20 sm:h-16 md:w-24 md:h-20 border-3 border-white/90 border-b-0 -translate-x-1/2 bg-green-300/40 shadow-lg" />
 
-                  {/* Center Line */}
-                  <div className="absolute top-1/2 left-3 right-3 h-1 bg-white/90 -translate-y-0.5 shadow-sm" />
-
-                  {/* Center spot */}
-                  <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-white/95 rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
-                </div>
+          <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-white/95 rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+        </div>
 
                 {/* Token Formation - 1-2-2-1 */}
                 <div className="absolute inset-0 flex flex-col items-center justify-between p-12">
