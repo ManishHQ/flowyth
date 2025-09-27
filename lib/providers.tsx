@@ -6,11 +6,20 @@ import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DynamicWagmiConnector } from "@dynamic-labs/wagmi-connector";
-import { config, flowTestnet } from "@/lib/wagmi";
+import { config } from "@/lib/wagmi";
 
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient();
+
+  // Get Dynamic environment ID from environment variable
+  const dynamicEnvironmentId = process.env.NEXT_PUBLIC_DYNAMIC_ENV_ID;
+
+  if (!dynamicEnvironmentId) {
+    console.error('NEXT_PUBLIC_DYNAMIC_ENV_ID environment variable is required');
+    // Fallback to demo environment ID for development
+    console.warn('Using fallback Dynamic environment ID - please set NEXT_PUBLIC_DYNAMIC_ENV_ID in your environment');
+  }
 
   return (
     <ThemeProvider
@@ -18,41 +27,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
-    >   
+    >
       <DynamicContextProvider
           theme="light"
           settings={{
-            environmentId:
-              // replace with your own environment ID
-              process.env.NEXT_PUBLIC_DYNAMIC_ENV_ID ||
-              "2762a57b-faa4-41ce-9f16-abff9300e2c9",
+            environmentId: dynamicEnvironmentId || "2762a57b-faa4-41ce-9f16-abff9300e2c9",
             walletConnectors: [EthereumWalletConnectors],
-            evmNetworks: [
-              {
-                blockExplorerUrls: [flowTestnet.blockExplorers.default.url],
-                chainId: flowTestnet.id,
-                chainName: flowTestnet.name,
-                iconUrls: ["https://cryptologos.cc/logos/flow-flow-logo.png"],
-                name: flowTestnet.name,
-                nativeCurrency: flowTestnet.nativeCurrency,
-                networkId: flowTestnet.id,
-                rpcUrls: flowTestnet.rpcUrls.default.http,
-                vanityName: "Flow EVM Testnet",
-              },
-            ],
           }}
         >
-        
+
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <DynamicWagmiConnector
-              overrideWagmiConfig={true}
-            >
+            <DynamicWagmiConnector>
               {children}
             </DynamicWagmiConnector>
           </QueryClientProvider>
         </WagmiProvider>
-        
+
       </DynamicContextProvider>
     </ThemeProvider>
   );
