@@ -10,8 +10,15 @@ import { UserService } from '@/lib/services/user-service';
 import { Camera, Edit, Save, X } from 'lucide-react';
 
 function ProfileContent() {
-  const { profile, walletAddress, displayName, isComplete, missingFields, isLoading: profileLoading } = useUserProfile();
-  const { updateUser, isLoading } = useUserStore();
+  const { profile, walletAddress, displayName, dynamicEmail, isComplete, missingFields, isLoading: profileLoading } = useUserProfile();
+  const { updateUser, createUser, isLoading } = useUserStore();
+  
+  console.log('ProfileContent render:', {
+    profile,
+    walletAddress,
+    profileLoading,
+    isComplete
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
@@ -27,13 +34,31 @@ function ProfileContent() {
   }, [profile]);
 
   const handleSave = async () => {
+    if (!walletAddress) return;
+
     try {
       console.log('Saving profile data:', formData);
-      await updateUser(formData);
-      console.log('Profile updated successfully');
+      
+      if (profile) {
+        // Update existing user
+        await updateUser(formData);
+        console.log('Profile updated successfully');
+      } else {
+        // Create new user with Dynamic email
+        const userData = {
+          wallet_address: walletAddress,
+          full_name: formData.full_name,
+          username: formData.username,
+          email: dynamicEmail || '', // Use Dynamic email
+        };
+        console.log('Creating new user:', userData);
+        await createUser(userData);
+        console.log('Profile created successfully');
+      }
+      
       setIsEditing(false);
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      console.error('Failed to save profile:', error);
     }
   };
 
@@ -63,6 +88,9 @@ function ProfileContent() {
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-4">👤 User Profile</h1>
           <p className="text-muted-foreground">Loading your profile...</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Wallet: {walletAddress || 'Not connected'}
+          </p>
         </div>
       </div>
     );
@@ -74,6 +102,9 @@ function ProfileContent() {
         <h1 className="text-3xl font-bold mb-4">👤 User Profile</h1>
         <p className="text-muted-foreground">
           Manage your crypto fantasy league profile
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Wallet: {walletAddress || 'Not connected'} | Profile: {profile ? 'Found' : 'Not found'}
         </p>
       </div>
 
@@ -114,17 +145,30 @@ function ProfileContent() {
                 {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
               </p>
             </div>
-            <Button
-              onClick={() => setIsEditing(!isEditing)}
-              variant={isEditing ? "outline" : "default"}
-            >
-              {isEditing ? <X className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-              {isEditing ? 'Cancel' : 'Edit'}
-            </Button>
+            {profile && (
+              <Button
+                onClick={() => setIsEditing(!isEditing)}
+                variant={isEditing ? "outline" : "default"}
+              >
+                {isEditing ? <X className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                {isEditing ? 'Cancel' : 'Edit'}
+              </Button>
+            )}
           </div>
 
-          {/* Profile Completeness */}
-          {!isComplete && (
+          {/* Profile Status */}
+          {!profile ? (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">Create Your Profile</h3>
+              <p className="text-blue-700 text-sm mb-2">
+                Welcome! Create your profile to start playing fantasy crypto tournaments.
+              </p>
+              <p className="text-blue-700 text-sm">
+                • Add your full name and username
+                • Your email is automatically linked from Dynamic
+              </p>
+            </div>
+          ) : !isComplete && (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <h3 className="font-semibold text-yellow-800 mb-2">Complete Your Profile</h3>
               <p className="text-yellow-700 text-sm mb-2">
@@ -142,7 +186,7 @@ function ProfileContent() {
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium mb-2">Full Name</label>
-              {isEditing ? (
+              {(isEditing || !profile) ? (
                 <input
                   type="text"
                   value={formData.full_name}
@@ -160,7 +204,7 @@ function ProfileContent() {
             {/* Username */}
             <div>
               <label className="block text-sm font-medium mb-2">Username</label>
-              {isEditing ? (
+              {(isEditing || !profile) ? (
                 <input
                   type="text"
                   value={formData.username}
@@ -175,14 +219,14 @@ function ProfileContent() {
               )}
             </div>
 
-            {/* Email (Read-only) */}
+            {/* Email (Read-only from Dynamic) */}
             <div>
               <label className="block text-sm font-medium mb-2">Email</label>
               <p className="p-3 bg-gray-50 rounded-md text-muted-foreground">
-                {profile?.email || 'Not set'}
+                {dynamicEmail || profile?.email || 'Not set'}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Email cannot be changed
+                Email is linked to your Dynamic account and cannot be changed
               </p>
             </div>
 
@@ -195,15 +239,17 @@ function ProfileContent() {
             </div>
 
             {/* Save Button */}
-            {isEditing && (
+            {(isEditing || !profile) && (
               <div className="flex space-x-3">
                 <Button onClick={handleSave} disabled={isLoading} className="flex-1">
                   <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Saving...' : 'Save Changes'}
+                  {isLoading ? 'Saving...' : (profile ? 'Save Changes' : 'Create Profile')}
                 </Button>
-                <Button onClick={handleCancel} variant="outline">
-                  Cancel
-                </Button>
+                {profile && (
+                  <Button onClick={handleCancel} variant="outline">
+                    Cancel
+                  </Button>
+                )}
               </div>
             )}
           </div>
