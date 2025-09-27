@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useDynamicContext, useIsLoggedIn } from '@/lib/dynamic';
 import { useUserStore } from '@/lib/stores/user-store';
-import type { User } from '../lib/supabase';
+import type { User } from '@/lib/supabase';
 
 interface UserProfile {
   full_name?: string;
@@ -63,10 +63,13 @@ export function useUserProfile() {
     }
   }, [isLoggedIn, walletAddress, checkUserExists]);
 
+  // Get email from Dynamic user
+  const dynamicEmail = user?.email;
+
   // Generate display name
   const displayName = profile?.full_name || 
                      profile?.username || 
-                     user?.email || 
+                     dynamicEmail || 
                      (walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Anonymous');
 
   // Check profile completeness
@@ -78,10 +81,23 @@ export function useUserProfile() {
 
   const isComplete = !missingFields.username && !missingFields.fullName;
 
+  console.log('useUserProfile returning:', {
+    profile,
+    walletAddress,
+    displayName,
+    dynamicEmail,
+    isComplete,
+    missingFields,
+    isLoading,
+    error,
+    isLoggedIn,
+  });
+
   return {
     profile,
     walletAddress,
     displayName,
+    dynamicEmail,
     isComplete,
     missingFields,
     isLoading,
