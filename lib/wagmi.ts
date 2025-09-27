@@ -1,6 +1,5 @@
 
 import { http, createConfig } from "wagmi";
-import { mainnet } from "wagmi/chains";
 import { defineChain } from "viem";
 
 export const flowTestnet = defineChain({
@@ -26,12 +25,11 @@ export const flowTestnet = defineChain({
 });
 
 export const config = createConfig({
-  // make sure to update the chains in the dashboard
-  chains: [mainnet, flowTestnet],
+  // Using only Flow EVM Testnet
+  chains: [flowTestnet],
   multiInjectedProviderDiscovery: false,
   ssr: true,
   transports: {
-    [mainnet.id]: http(),
     [flowTestnet.id]: http(),
   },
 });

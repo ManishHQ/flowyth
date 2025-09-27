@@ -6,7 +6,7 @@ import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DynamicWagmiConnector } from "@dynamic-labs/wagmi-connector";
-import { config } from "@/lib/wagmi";
+import { config, flowTestnet } from "@/lib/wagmi";
 
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -27,12 +27,27 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               process.env.NEXT_PUBLIC_DYNAMIC_ENV_ID ||
               "2762a57b-faa4-41ce-9f16-abff9300e2c9",
             walletConnectors: [EthereumWalletConnectors],
+            evmNetworks: [
+              {
+                blockExplorerUrls: [flowTestnet.blockExplorers.default.url],
+                chainId: flowTestnet.id,
+                chainName: flowTestnet.name,
+                iconUrls: ["https://cryptologos.cc/logos/flow-flow-logo.png"],
+                name: flowTestnet.name,
+                nativeCurrency: flowTestnet.nativeCurrency,
+                networkId: flowTestnet.id,
+                rpcUrls: flowTestnet.rpcUrls.default.http,
+                vanityName: "Flow EVM Testnet",
+              },
+            ],
           }}
         >
         
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <DynamicWagmiConnector>
+            <DynamicWagmiConnector
+              overrideWagmiConfig={true}
+            >
               {children}
             </DynamicWagmiConnector>
           </QueryClientProvider>
