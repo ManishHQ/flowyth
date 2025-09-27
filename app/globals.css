@@ -45,71 +45,73 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* GameFi Football Theme - Light Mode */
+  --background: #0a1e0a; /* Dark forest green */
+  --foreground: #ffffff;
+  --card: #1a4d1a; /* Football field green */
+  --card-foreground: #ffffff;
+  --popover: #1a4d1a;
+  --popover-foreground: #ffffff;
+  --primary: #00ff41; /* Bright neon green */
+  --primary-foreground: #000000;
+  --secondary: #ffaa00; /* Golden yellow */
+  --secondary-foreground: #000000;
+  --muted: #0f2e0f; /* Darker green */
+  --muted-foreground: #a0a0a0;
+  --accent: #ff4444; /* Red accent */
+  --accent-foreground: #ffffff;
+  --destructive: #ff0000;
+  --border: #2d5a2d; /* Green border */
+  --input: #1a4d1a;
+  --ring: #00ff41;
+  --chart-1: #00ff41;
+  --chart-2: #ffaa00;
+  --chart-3: #ff4444;
+  --chart-4: #00aaff;
+  --chart-5: #aa00ff;
+  --sidebar: #1a4d1a;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #00ff41;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #ffaa00;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #2d5a2d;
+  --sidebar-ring: #00ff41;
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  /* GameFi Football Theme - Dark Mode */
+  --background: #051205; /* Even darker green */
+  --foreground: #ffffff;
+  --card: #0f2e0f; /* Darker field green */
+  --card-foreground: #ffffff;
+  --popover: #0f2e0f;
+  --popover-foreground: #ffffff;
+  --primary: #00cc33; /* Slightly dimmer neon green */
+  --primary-foreground: #000000;
+  --secondary: #cc8800; /* Dimmer golden yellow */
+  --secondary-foreground: #000000;
+  --muted: #0a1e0a; /* Very dark green */
+  --muted-foreground: #808080;
+  --accent: #cc3333; /* Dimmer red accent */
+  --accent-foreground: #ffffff;
+  --destructive: #cc0000;
+  --border: #1a4d1a; /* Dark green border */
+  --input: #0f2e0f;
+  --ring: #00cc33;
+  --chart-1: #00cc33;
+  --chart-2: #cc8800;
+  --chart-3: #cc3333;
+  --chart-4: #0088cc;
+  --chart-5: #8800cc;
+  --sidebar: #0f2e0f;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #00cc33;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #cc8800;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #1a4d1a;
+  --sidebar-ring: #00cc33;
 }
 
 @layer base {
@@ -120,3 +122,70 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Football Field Background */
+.football-field {
+  background: linear-gradient(90deg, transparent 49%, rgba(255, 255, 255, 0.1) 49%, rgba(255, 255, 255, 0.1) 51%, transparent 51%),
+              linear-gradient(0deg, transparent 49%, rgba(255, 255, 255, 0.1) 49%, rgba(255, 255, 255, 0.1) 51%, transparent 51%);
+  background-size: 80px 80px;
+  position: relative;
+}
+
+.football-field::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    /* Center circle */
+    radial-gradient(circle at 50% 50%, transparent 98px, rgba(255, 255, 255, 0.1) 100px, rgba(255, 255, 255, 0.1) 102px, transparent 104px),
+    /* Goal areas */
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.05) 15%, transparent 15%, transparent 85%, rgba(255, 255, 255, 0.05) 85%, rgba(255, 255, 255, 0.05) 100%);
+  pointer-events: none;
+}
+
+/* Game UI Elements */
+.game-card {
+  background: rgba(26, 77, 26, 0.9);
+  border: 2px solid #2d5a2d;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.game-card:hover {
+  border-color: #00ff41;
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+  transform: translateY(-2px);
+}
+
+.neon-text {
+  text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  from {
+    box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+  }
+  to {
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.8), 0 0 30px rgba(0, 255, 65, 0.4);
+  }
+}
+
+.score-display {
+  background: linear-gradient(135deg, #1a4d1a, #0f2e0f);
+  border: 1px solid #00ff41;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+}
+
+/* Position badges */
+.position-goalkeeper { background: #ffaa00; color: #000; }
+.position-defender { background: #00aaff; color: #fff; }
+.position-midfielder { background: #00ff41; color: #000; }
+.position-striker { background: #ff4444; color: #fff; }

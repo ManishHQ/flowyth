@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { UserService } from '../services/user-service';
-import type { User } from '../../supabase';
+import type { User } from '../supabase';
 
 // User onboarding state
 export type OnboardingStatus = 'idle' | 'checking' | 'onboarding' | 'completed';
