@@ -9,20 +9,27 @@ export class UserService {
    * Get user by wallet address
    */
   static async getUserByWallet(walletAddress: string): Promise<User | null> {
+    console.log('UserService.getUserByWallet called with:', walletAddress);
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('wallet_address', walletAddress.toLowerCase())
       .single();
 
+    console.log('Supabase query result:', { data, error });
+
     if (error) {
       if (error.code === 'PGRST116') {
         // No rows returned - user doesn't exist
+        console.log('User not found in database');
         return null;
       }
+      console.error('Supabase error:', error);
       throw new Error(`Failed to get user: ${error.message}`);
     }
 
+    console.log('User found:', data);
     return data;
   }
 
@@ -50,11 +57,15 @@ export class UserService {
    * Create or update user profile (upsert)
    */
   static async upsertUser(userData: UserInsert): Promise<User> {
+    console.log('UserService.upsertUser called with:', userData);
+    
     // Normalize wallet address to lowercase
     const normalizedData = {
       ...userData,
       wallet_address: userData.wallet_address.toLowerCase(),
     };
+
+    console.log('Normalized data:', normalizedData);
 
     const { data, error } = await supabase
       .from('users')
@@ -65,14 +76,19 @@ export class UserService {
       .select()
       .single();
 
+    console.log('Upsert result:', { data, error });
+
     if (error) {
+      console.error('Upsert error:', error);
       throw new Error(`Failed to upsert user: ${error.message}`);
     }
 
     if (!data) {
+      console.error('No data returned from upsert');
       throw new Error('Failed to upsert user: No data returned');
     }
 
+    console.log('User upserted successfully:', data);
     return data;
   }
 
@@ -80,6 +96,8 @@ export class UserService {
    * Update user profile
    */
   static async updateUser(walletAddress: string, updates: UserUpdate): Promise<User> {
+    console.log('UserService.updateUser called with:', { walletAddress, updates });
+    
     const { data, error } = await supabase
       .from('users')
       .update(updates)
@@ -87,14 +105,19 @@ export class UserService {
       .select()
       .single();
 
+    console.log('Update result:', { data, error });
+
     if (error) {
+      console.error('Update error:', error);
       throw new Error(`Failed to update user: ${error.message}`);
     }
 
     if (!data) {
+      console.error('No data returned from update');
       throw new Error('Failed to update user: No data returned');
     }
 
+    console.log('User updated successfully:', data);
     return data;
   }
 
