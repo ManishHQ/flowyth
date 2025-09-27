@@ -1,4 +1,4 @@
-import { supabase, type User, type UserInsert, type UserUpdate } from '../../supabase';
+import { supabase, type User, type UserInsert, type UserUpdate } from '../supabase';
 
 /**
  * User service for managing user profiles with Dynamic.xyz authentication

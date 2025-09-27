@@ -148,10 +148,13 @@ export const useUserStore = create<UserState>()(
 
       try {
         set({ isLoading: true, error: null });
+        console.log('Updating user with data:', updates);
         const updatedUser = await UserService.updateUser(user.wallet_address, updates);
+        console.log('User updated successfully:', updatedUser);
         set({ user: updatedUser });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to update user';
+        console.error('Failed to update user:', error);
         set({ error: errorMessage });
         throw error;
       } finally {
