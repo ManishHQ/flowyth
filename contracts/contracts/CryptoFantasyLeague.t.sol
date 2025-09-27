@@ -143,7 +143,8 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_CreateTournament() public {
-        vm.prank(owner);
+        // Anyone can create tournaments now (no owner restriction)
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         assertEq(tournamentId, 0);
@@ -171,7 +172,7 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_RegisterForTournament() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         bytes32[6] memory squad = _createValidSquad();
@@ -190,7 +191,7 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_RegisterForTournament_InvalidSquad() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         // Invalid squad: 2 goalkeepers, 0 defenders
@@ -207,8 +208,26 @@ contract CryptoFantasyLeagueTest is Test {
         league.registerForTournament{value: ENTRY_FEE}(tournamentId, invalidSquad);
     }
 
+    function test_RegisterForTournament_DuplicateSquad() public {
+        vm.prank(player1);
+        uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
+
+        // Valid formation but with duplicates: SOL used twice
+        bytes32[6] memory duplicateSquad;
+        duplicateSquad[0] = USDC_ID;  // Goalkeeper
+        duplicateSquad[1] = BTC_ID;   // Defender 1
+        duplicateSquad[2] = ETH_ID;   // Defender 2
+        duplicateSquad[3] = SOL_ID;   // Midfielder 1
+        duplicateSquad[4] = SOL_ID;   // Midfielder 2 (DUPLICATE!)
+        duplicateSquad[5] = DOGE_ID;  // Striker
+
+        vm.prank(player2);
+        vm.expectRevert("Invalid squad formation");
+        league.registerForTournament{value: ENTRY_FEE}(tournamentId, duplicateSquad);
+    }
+
     function test_RegisterForTournament_IncorrectFee() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         bytes32[6] memory squad = _createValidSquad();
@@ -219,7 +238,7 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_RegisterForTournament_AlreadyRegistered() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         bytes32[6] memory squad = _createValidSquad();
@@ -233,7 +252,7 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_StartTournament() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         bytes32[6] memory squad = _createValidSquad();
@@ -251,7 +270,7 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_StartTournament_TooEarly() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         bytes32[6] memory squad = _createValidSquad();
@@ -261,13 +280,13 @@ contract CryptoFantasyLeagueTest is Test {
         bytes[] memory priceUpdateData = _createPriceUpdateData();
         uint256 updateFee = mockPyth.getUpdateFee(priceUpdateData);
 
-        vm.prank(owner);
+        vm.prank(player1);
         vm.expectRevert("Too early to start");
         league.startTournament{value: updateFee}(tournamentId, priceUpdateData);
     }
 
     function test_FinalizeTournament() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         // Register multiple players
@@ -407,32 +426,10 @@ contract CryptoFantasyLeagueTest is Test {
         assertEq(price.expo, -8);
     }
 
-    function test_OnlyOwner_CreateTournament() public {
-        vm.prank(player1);
-        vm.expectRevert("Not owner");
-        league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
-    }
 
-    function test_OnlyOwner_StartTournament() public {
-        vm.prank(owner);
-        uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
-
-        bytes32[6] memory squad = _createValidSquad();
-        vm.prank(player1);
-        league.registerForTournament{value: ENTRY_FEE}(tournamentId, squad);
-
-        vm.warp(block.timestamp + 1 hours);
-
-        bytes[] memory priceUpdateData = _createPriceUpdateData();
-        uint256 updateFee = mockPyth.getUpdateFee(priceUpdateData);
-
-        vm.prank(player1);
-        vm.expectRevert("Not owner");
-        league.startTournament{value: updateFee}(tournamentId, priceUpdateData);
-    }
 
     function test_MaxParticipants() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         bytes32[6] memory squad = _createValidSquad();
@@ -454,7 +451,7 @@ contract CryptoFantasyLeagueTest is Test {
     }
 
     function test_RegistrationClosed() public {
-        vm.prank(owner);
+        vm.prank(player1);
         uint256 tournamentId = league.createTournament(ENTRY_FEE, TOURNAMENT_DURATION);
 
         // Fast forward past registration period
