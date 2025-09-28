@@ -34,16 +34,6 @@ export default function DashboardPage() {
                 </Card>
               </Link>
 
-              <Link href="/create-squad">
-                <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <div className="text-center space-y-2">
-                    <div className="text-3xl">⚽</div>
-                    <h3 className="font-semibold text-lg">Create Squad</h3>
-                    <p className="text-sm text-muted-foreground">Build your crypto fantasy team</p>
-                  </div>
-                </Card>
-              </Link>
-
               <Link href="/pvp">
                 <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
                   <div className="text-center space-y-2">

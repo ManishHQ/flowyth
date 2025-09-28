@@ -5,13 +5,17 @@ import AuthGuard from '@/components/auth-guard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useUserProfile, useDynamicUser } from '@/hooks/use-dynamic-user';
+import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
+import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/lib/stores/user-store';
 import { UserService } from '@/lib/services/user-service';
-import { Camera, Edit, Save, X } from 'lucide-react';
+import { Camera, Edit, Save, X, LogOut } from 'lucide-react';
 
 function ProfileContent() {
   const { profile, walletAddress, displayName, dynamicEmail, isComplete, missingFields, isLoading: profileLoading } = useUserProfile();
   const { updateUser, createUser, isLoading } = useUserStore();
+  const { handleLogOut } = useDynamicContext();
+  const router = useRouter();
   
   console.log('ProfileContent render:', {
     profile,
@@ -72,12 +76,21 @@ function ProfileContent() {
 
   const handlePhotoUpload = async (file: File) => {
     if (!walletAddress) return;
-    
+
     try {
       const photoUrl = await UserService.uploadUserPhoto(walletAddress, file);
       await updateUser({ photo_url: photoUrl });
     } catch (error) {
       console.error('Failed to upload photo:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await handleLogOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
   };
 
@@ -280,6 +293,24 @@ function ProfileContent() {
             <span className="text-muted-foreground">Total winnings:</span>
             <p className="font-medium">0 FLOW</p>
           </div>
+        </div>
+      </Card>
+
+      {/* Logout Section */}
+      <Card className="p-6 max-w-2xl mx-auto">
+        <h3 className="text-lg font-semibold mb-4">Account Actions</h3>
+        <div className="space-y-4">
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            You will be redirected to the homepage after logging out
+          </p>
         </div>
       </Card>
     </div>
