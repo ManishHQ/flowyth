@@ -5,28 +5,17 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DynamicEmbeddedWidget from "@/components/dynamic/dynamic-embedded-widget";
+import LandingNavbar from "@/components/landing-navbar";
 import { useIsLoggedIn } from "@/lib/dynamic";
 
 export default function Main() {
   const isLoggedIn = useIsLoggedIn();
 
-  if (isLoggedIn) {
-    // Redirect to dashboard if already logged in
-    return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-md mx-auto text-center">
-          <h1 className="text-2xl font-bold mb-4">Welcome back!</h1>
-          <p className="text-muted-foreground mb-6">You're already logged in. Ready to play?</p>
-          <Button asChild>
-            <Link href="/dashboard">Go to Dashboard</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Navbar */}
+      <LandingNavbar />
+
       {/* Floating particles for game atmosphere */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-primary rounded-full opacity-30 animate-ping"></div>
@@ -34,8 +23,9 @@ export default function Main() {
         <div className="absolute top-1/2 left-3/4 w-2 h-2 bg-primary rounded-full opacity-30 animate-ping" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center p-6 md:p-10">
-        <div className="flex w-full max-w-6xl flex-col gap-8">
+      {/* Main landing content - always show */}
+        <div className="relative z-10 flex min-h-screen items-center justify-center p-6 md:p-10">
+          <div className="flex w-full max-w-6xl flex-col gap-8">
 
           {/* Hero Section with Auth Widget */}
           <div className="bg-card border border-border rounded-xl p-8 text-center shadow-lg">
@@ -52,13 +42,21 @@ export default function Main() {
             </div>
 
             {/* Authentication Widget */}
-            <div className="max-w-sm mx-auto mb-8">
-              <DynamicEmbeddedWidget />
-            </div>
+            {
+              !isLoggedIn && (
+                <div>
 
-            <p className="text-sm text-muted-foreground">
-              Connect your wallet to enter the arena and start trading crypto fantasy!
-            </p>
+                <div className="max-w-sm mx-auto mb-8">
+                  <DynamicEmbeddedWidget />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Connect your wallet to enter the arena and start trading crypto fantasy!
+                </p>
+            </div>
+              )
+            }
+           
+
           </div>
 
           {/* Game Stats */}
@@ -82,7 +80,7 @@ export default function Main() {
           </div>
 
           {/* Game Rules */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <div id="features" className="grid md:grid-cols-2 gap-6">
             <div className="bg-card border border-border rounded-xl p-6 shadow-lg">
               <h3 className="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
                 ⚽ SQUAD FORMATION
@@ -146,7 +144,7 @@ export default function Main() {
           </div>
 
           {/* Technology Stack */}
-          <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
+          <div id="how-it-works" className="bg-card border border-border rounded-xl p-8 shadow-lg">
             <h3 className="text-3xl font-bold text-center text-primary mb-8" style={{ fontFamily: 'var(--font-rebels), serif' }}>
               ⚡ POWERED BY NEXT-GEN TECH
             </h3>
@@ -170,7 +168,7 @@ export default function Main() {
           </div>
 
           {/* Call to Action */}
-          <div className="bg-card border border-border rounded-xl p-8 text-center shadow-lg">
+          <div id="tournaments" className="bg-card border border-border rounded-xl p-8 text-center shadow-lg">
             <h3 className="text-3xl font-bold text-primary mb-4" style={{ fontFamily: 'var(--font-rebels), serif' }}>
               READY TO DOMINATE?
             </h3>

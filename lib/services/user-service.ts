@@ -217,4 +217,39 @@ export class UserService {
 
     return data;
   }
+
+  /**
+   * Get multiple users by wallet addresses
+   */
+  static async getUsersByWallets(walletAddresses: string[]): Promise<Record<string, User>> {
+    if (walletAddresses.length === 0) {
+      return {};
+    }
+
+    const normalizedAddresses = walletAddresses.map(addr => addr.toLowerCase());
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .in('wallet_address', normalizedAddresses);
+
+    if (error) {
+      console.error('Error fetching multiple users:', error);
+      return {};
+    }
+
+    // Convert to lookup object
+    const profiles: Record<string, User> = {};
+    data?.forEach(user => {
+      // Use original case for the key to match what components expect
+      const originalAddress = walletAddresses.find(addr =>
+        addr.toLowerCase() === user.wallet_address.toLowerCase()
+      );
+      if (originalAddress) {
+        profiles[originalAddress] = user;
+      }
+    });
+
+    return profiles;
+  }
 }

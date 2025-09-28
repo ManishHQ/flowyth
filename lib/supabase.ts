@@ -258,6 +258,65 @@ export type Database = {
           recorded_at?: string;
         };
       };
+      pvp_matches: {
+        Row: {
+          id: string;
+          invite_code: string;
+          creator_wallet: string;
+          opponent_wallet: string | null;
+          creator_coin: string | null;
+          opponent_coin: string | null;
+          creator_coin_start_price: number | null;
+          opponent_coin_start_price: number | null;
+          creator_coin_end_price: number | null;
+          opponent_coin_end_price: number | null;
+          winner_wallet: string | null;
+          status: 'waiting_for_opponent' | 'selecting_coins' | 'in_progress' | 'finished';
+          duration_seconds: number;
+          start_time: string | null;
+          end_time: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          invite_code: string;
+          creator_wallet: string;
+          opponent_wallet?: string | null;
+          creator_coin?: string | null;
+          opponent_coin?: string | null;
+          creator_coin_start_price?: number | null;
+          opponent_coin_start_price?: number | null;
+          creator_coin_end_price?: number | null;
+          opponent_coin_end_price?: number | null;
+          winner_wallet?: string | null;
+          status?: 'waiting_for_opponent' | 'selecting_coins' | 'in_progress' | 'finished';
+          duration_seconds?: number;
+          start_time?: string | null;
+          end_time?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          invite_code?: string;
+          creator_wallet?: string;
+          opponent_wallet?: string | null;
+          creator_coin?: string | null;
+          opponent_coin?: string | null;
+          creator_coin_start_price?: number | null;
+          opponent_coin_start_price?: number | null;
+          creator_coin_end_price?: number | null;
+          opponent_coin_end_price?: number | null;
+          winner_wallet?: string | null;
+          status?: 'waiting_for_opponent' | 'selecting_coins' | 'in_progress' | 'finished';
+          duration_seconds?: number;
+          start_time?: string | null;
+          end_time?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 };
@@ -282,3 +341,7 @@ export type AvailableTokenUpdate = Database['public']['Tables']['available_token
 export type TokenPriceHistory = Database['public']['Tables']['token_price_history']['Row'];
 export type TokenPriceHistoryInsert = Database['public']['Tables']['token_price_history']['Insert'];
 export type TokenPriceHistoryUpdate = Database['public']['Tables']['token_price_history']['Update'];
+
+export type PvpMatch = Database['public']['Tables']['pvp_matches']['Row'];
+export type PvpMatchInsert = Database['public']['Tables']['pvp_matches']['Insert'];
+export type PvpMatchUpdate = Database['public']['Tables']['pvp_matches']['Update'];

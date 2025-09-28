@@ -124,6 +124,65 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Global text color defaults for better dark mode support */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground;
+  }
+
+  p {
+    @apply text-foreground/90;
+  }
+
+  /* Ensure cards have proper text colors */
+  .card {
+    @apply text-card-foreground;
+  }
+
+  /* Strong/bold text should be more prominent */
+  strong, b {
+    @apply text-foreground font-semibold;
+  }
+
+  /* Links should use primary color */
+  a {
+    @apply text-primary hover:text-primary/80;
+  }
+
+  /* Form labels */
+  label {
+    @apply text-foreground/90;
+  }
+
+  /* Better default for small text */
+  .text-xs, .text-sm {
+    @apply text-foreground/80;
+  }
+
+  /* Utility classes for consistent text colors */
+  .text-primary-readable {
+    @apply text-foreground;
+  }
+
+  .text-secondary-readable {
+    @apply text-muted-foreground;
+  }
+
+  .text-success-readable {
+    @apply text-green-700 dark:text-green-300;
+  }
+
+  .text-error-readable {
+    @apply text-red-700 dark:text-red-300;
+  }
+
+  .text-warning-readable {
+    @apply text-yellow-700 dark:text-yellow-300;
+  }
+
+  .text-info-readable {
+    @apply text-blue-700 dark:text-blue-300;
+  }
 }
 
 /* Football Field Background */
