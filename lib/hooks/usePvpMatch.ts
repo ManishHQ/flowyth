@@ -242,12 +242,29 @@ export function usePvpMatch(matchId?: string) {
 
   // Get time remaining in match
   const getTimeRemaining = useCallback(() => {
-    if (!match || !match.end_time || match.status !== 'in_progress') return 0;
-    
+    if (!match || !match.end_time || match.status !== 'in_progress') {
+      console.log('getTimeRemaining early return:', {
+        hasMatch: !!match,
+        hasEndTime: !!match?.end_time,
+        status: match?.status
+      });
+      return 0;
+    }
+
     const endTime = new Date(match.end_time).getTime();
     const now = Date.now();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-    
+
+    if (remaining <= 5) {
+      console.log('getTimeRemaining details:', {
+        endTime: match.end_time,
+        endTimeMs: endTime,
+        nowMs: now,
+        differenceMs: endTime - now,
+        remaining
+      });
+    }
+
     return remaining;
   }, [match]);
 

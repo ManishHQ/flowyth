@@ -168,6 +168,12 @@ export class PvpService {
 
   // Finish the match and determine winner
   static async finishMatch(matchId: string, creatorEndPrice: number, opponentEndPrice: number): Promise<PvpMatch> {
+    console.log('🏁 PvpService.finishMatch called:', {
+      matchId,
+      creatorEndPrice,
+      opponentEndPrice
+    });
+
     const { data: match, error: fetchError } = await supabase
       .from('pvp_matches')
       .select()
@@ -175,26 +181,58 @@ export class PvpService {
       .single();
 
     if (fetchError || !match) {
+      console.error('❌ Match not found for finishing:', fetchError);
       throw new Error('Match not found');
     }
 
+    console.log('📋 Current match state before finishing:', {
+      id: match.id,
+      creatorCoin: match.creator_coin,
+      opponentCoin: match.opponent_coin,
+      creatorStartPrice: match.creator_coin_start_price,
+      opponentStartPrice: match.opponent_coin_start_price,
+      status: match.status
+    });
+
     // Calculate percentage changes
-    const creatorChange = match.creator_coin_start_price 
+    const creatorChange = match.creator_coin_start_price
       ? ((creatorEndPrice - match.creator_coin_start_price) / match.creator_coin_start_price) * 100
       : 0;
 
-    const opponentChange = match.opponent_coin_start_price 
+    const opponentChange = match.opponent_coin_start_price
       ? ((opponentEndPrice - match.opponent_coin_start_price) / match.opponent_coin_start_price) * 100
       : 0;
 
-    // Determine winner
+    console.log('📊 Finishing match with calculations:', {
+      creatorStartPrice: match.creator_coin_start_price,
+      creatorEndPrice: creatorEndPrice,
+      creatorChange: creatorChange.toFixed(6) + '%',
+      opponentStartPrice: match.opponent_coin_start_price,
+      opponentEndPrice: opponentEndPrice,
+      opponentChange: opponentChange.toFixed(6) + '%',
+      difference: Math.abs(creatorChange - opponentChange).toFixed(6) + '%'
+    });
+
+    // Determine winner with very precise comparison
     let winnerWallet: string | null = null;
-    if (creatorChange > opponentChange) {
-      winnerWallet = match.creator_wallet;
-    } else if (opponentChange > creatorChange) {
-      winnerWallet = match.opponent_wallet;
+    if (Math.abs(creatorChange - opponentChange) > 0.000001) { // Use same threshold as calculateMatchStats
+      if (creatorChange > opponentChange) {
+        winnerWallet = match.creator_wallet;
+        console.log('🏆 Creator wins!', creatorChange, '% >', opponentChange, '%');
+      } else {
+        winnerWallet = match.opponent_wallet;
+        console.log('🏆 Opponent wins!', opponentChange, '% >', creatorChange, '%');
+      }
+    } else {
+      console.log('🤝 It\'s a tie!', creatorChange, '% ≈', opponentChange, '%');
     }
-    // If equal, it's a tie (winnerWallet stays null)
+
+    console.log('💾 Updating database with:', {
+      status: 'finished',
+      creator_coin_end_price: creatorEndPrice,
+      opponent_coin_end_price: opponentEndPrice,
+      winner_wallet: winnerWallet
+    });
 
     const { data, error } = await supabase
       .from('pvp_matches')
@@ -209,8 +247,17 @@ export class PvpService {
       .single();
 
     if (error) {
+      console.error('❌ Failed to update database:', error);
       throw new Error(`Failed to finish match: ${error.message}`);
     }
+
+    console.log('✅ Match finished successfully in database:', {
+      id: data.id,
+      status: data.status,
+      creatorEndPrice: data.creator_coin_end_price,
+      opponentEndPrice: data.opponent_coin_end_price,
+      winner: data.winner_wallet
+    });
 
     return data;
   }
@@ -351,6 +398,18 @@ export class PvpService {
     opponentChange: number;
     winner: 'creator' | 'opponent' | 'tie';
   } {
+    console.log('🔍 PvpService.calculateMatchStats called with match:', {
+      id: match.id,
+      creatorCoin: match.creator_coin,
+      opponentCoin: match.opponent_coin,
+      creatorStartPrice: match.creator_coin_start_price,
+      creatorEndPrice: match.creator_coin_end_price,
+      opponentStartPrice: match.opponent_coin_start_price,
+      opponentEndPrice: match.opponent_coin_end_price,
+      status: match.status,
+      winnerWallet: match.winner_wallet
+    });
+
     const creatorChange = match.creator_coin_start_price && match.creator_coin_end_price
       ? ((match.creator_coin_end_price - match.creator_coin_start_price) / match.creator_coin_start_price) * 100
       : 0;
@@ -359,12 +418,31 @@ export class PvpService {
       ? ((match.opponent_coin_end_price - match.opponent_coin_start_price) / match.opponent_coin_start_price) * 100
       : 0;
 
+    console.log('📊 Calculated percentage changes:', {
+      creatorChange: creatorChange.toFixed(6) + '%',
+      opponentChange: opponentChange.toFixed(6) + '%',
+      difference: Math.abs(creatorChange - opponentChange).toFixed(6) + '%',
+      creatorBetter: creatorChange > opponentChange,
+      opponentBetter: opponentChange > creatorChange,
+      isExactTie: creatorChange === opponentChange
+    });
+
     let winner: 'creator' | 'opponent' | 'tie' = 'tie';
-    if (creatorChange > opponentChange) {
-      winner = 'creator';
-    } else if (opponentChange > creatorChange) {
-      winner = 'opponent';
+    if (Math.abs(creatorChange - opponentChange) > 0.000001) { // Use very small threshold
+      if (creatorChange > opponentChange) {
+        winner = 'creator';
+      } else {
+        winner = 'opponent';
+      }
     }
+
+    console.log('🏆 Winner determination result:', {
+      winner,
+      creatorChange: creatorChange + '%',
+      opponentChange: opponentChange + '%',
+      reason: winner === 'tie' ? 'Changes are equal or within threshold' :
+              winner === 'creator' ? 'Creator performed better' : 'Opponent performed better'
+    });
 
     return {
       creatorChange,

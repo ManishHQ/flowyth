@@ -156,10 +156,10 @@ function SwipeCard({ market, onSwipe, isVisible, currentIndex, totalCount, zInde
                 <button
                   key={value}
                   onClick={() => setAmount(value)}
-                  className={`px-3 py-1 rounded-full border-2 transition-all ${
+                  className={`px-3 py-1 rounded-full border-2  transition-all ${
                     amount === value
                       ? 'bg-red-500 border-red-600 text-white'
-                      : 'bg-white border-black text-black hover:bg-gray-100'
+                      : 'bg-white border-black text-black dark:text-blue-900 hover:bg-gray-100'
                   }`}
                 >
                   <span className="font-bold text-sm">${value}</span>

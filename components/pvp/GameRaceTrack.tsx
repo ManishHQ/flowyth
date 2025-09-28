@@ -24,27 +24,48 @@ export const GameRaceTrack: React.FC<GameRaceTrackProps> = ({
   opponentCoin,
   timeLeft
 }) => {
-  // Calculate smart auto-scaling Y-axis with dynamic zero line (from UI prototype)
+  // Calculate dynamic chart scaling based on actual price movements
   const allValues = [...creatorData, ...opponentData].filter(v => v !== undefined && v !== null);
 
-  let yMin = -0.05, yMax = 0.05; // Default scale
+  let yMin = -0.001, yMax = 0.001; // Much smaller default scale for crypto precision
 
   if (allValues.length > 0) {
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
     const dataRange = maxValue - minValue;
 
-    // Smart padding (20% of range, minimum 0.01%)
-    const padding = Math.max(dataRange * 0.2, 0.01);
-    const tempYMin = minValue - padding;
-    const tempYMax = maxValue + padding;
+    if (dataRange > 0) {
+      // Dynamic padding based on the actual data range
+      const padding = Math.max(dataRange * 0.25, 0.0002); // 25% padding with minimum of 0.02%
+      yMin = minValue - padding;
+      yMax = maxValue + padding;
 
-    // Ensure minimum range for visibility
-    const finalRange = Math.max(tempYMax - tempYMin, 0.02);
-    const center = (tempYMax + tempYMin) / 2;
-    yMax = center + finalRange / 2;
-    yMin = center - finalRange / 2;
+      // Ensure minimum visible range based on data magnitude
+      const minRange = Math.max(dataRange * 1.2, 0.0005); // At least 120% of data range or 0.05%
+      const currentRange = yMax - yMin;
+
+      if (currentRange < minRange) {
+        const center = (yMax + yMin) / 2;
+        yMax = center + minRange / 2;
+        yMin = center - minRange / 2;
+      }
+    } else {
+      // If all values are the same, create a small range around that value
+      const centerValue = allValues[0];
+      const smallRange = Math.max(Math.abs(centerValue) * 0.1, 0.0005); // 10% of value or minimum 0.05%
+      yMin = centerValue - smallRange;
+      yMax = centerValue + smallRange;
+    }
   }
+
+  console.log('Chart scaling:', {
+    allValues: allValues.slice(-3), // Last 3 values for debugging
+    minValue: allValues.length > 0 ? Math.min(...allValues) : 'none',
+    maxValue: allValues.length > 0 ? Math.max(...allValues) : 'none',
+    yMin: (yMin * 100).toFixed(4) + '%',
+    yMax: (yMax * 100).toFixed(4) + '%',
+    range: ((yMax - yMin) * 100).toFixed(4) + '%'
+  });
 
   // Calculate where 0% should be positioned
   const zeroNormalized = (0 - yMin) / (yMax - yMin);

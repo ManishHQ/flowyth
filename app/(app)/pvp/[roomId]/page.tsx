@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import NumberFlow from "@number-flow/react";
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import { usePvpMatch } from '@/lib/hooks/usePvpMatch';
 import { useDynamicContext, useIsLoggedIn } from '@dynamic-labs/sdk-react-core';
 import DynamicWidget from '@/components/dynamic/dynamic-widget';
@@ -75,7 +74,6 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
   // Chart data
   const [creatorData, setCreatorData] = useState<number[]>([]);
   const [opponentData, setOpponentData] = useState<number[]>([]);
-  const [timeLabels, setTimeLabels] = useState<string[]>([]);
 
   const pricesRef = useRef<PriceData[]>([]);
 
@@ -199,10 +197,8 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
           dataUpdated = true;
         }
 
-        // Update time labels if any data was updated
+        // Log results if data was updated
         if (dataUpdated) {
-          setTimeLabels(prev => [...prev, new Date().toLocaleTimeString()].slice(-20));
-
           console.log('Chart data collection results:', {
             creatorValid: !!creatorCoinPrice,
             opponentValid: !!opponentCoinPrice,
@@ -225,15 +221,43 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
   useEffect(() => {
     if (!isActive) return;
 
+    console.log('Timer effect starting for active match:', {
+      matchId: match?.id,
+      status: match?.status,
+      startTime: match?.start_time,
+      endTime: match?.end_time,
+      durationSeconds: match?.duration_seconds,
+      isConnected
+    });
+
+    // Initialize timer immediately
+    const remaining = getTimeRemaining();
+    setTimeLeft(remaining);
+
     const timer = setInterval(() => {
       const remaining = getTimeRemaining();
       setTimeLeft(remaining);
 
-      if (remaining <= 0 && match && isConnected) {
-        // Auto-finish match when time runs out
-        const currentPrices = getCurrentPrices(prices);
-        console.log('Timer expired, attempting to finish match:', {
+      if (remaining <= 10 && remaining > 0) {
+        console.log('Match ending soon:', remaining, 'seconds remaining');
+      }
+
+      // Force finish when timer reaches 0 or goes negative
+      if (remaining <= 0 && match && match.status === 'in_progress') {
+        console.log('⏰ TIMER EXPIRED - Forcing match to finish:', {
           matchId: match.id,
+          status: match.status,
+          remaining,
+          isConnected,
+          endTime: match.end_time,
+          now: new Date().toISOString()
+        });
+
+        // Immediately clear timer to prevent multiple attempts
+        clearInterval(timer);
+
+        const currentPrices = getCurrentPrices(prices);
+        console.log('Getting current prices for finish:', {
           currentPrices,
           pricesLength: prices.length,
           creatorCoin: match.creator_coin,
@@ -241,15 +265,16 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
           availablePrices: prices.map(p => ({ symbol: p.symbol, price: p.price }))
         });
 
-        if (currentPrices && currentPrices.creator > 0 && currentPrices.opponent > 0) {
-          console.log('Calling finishMatch with valid prices:', {
+        if (currentPrices && currentPrices.creator && currentPrices.opponent && currentPrices.creator > 0 && currentPrices.opponent > 0) {
+          console.log('✅ Calling finishMatch with valid prices:', {
             creatorPrice: currentPrices.creator,
             opponentPrice: currentPrices.opponent,
             matchId: match.id
           });
+
           finishMatch(currentPrices.creator, currentPrices.opponent)
             .then((result) => {
-              console.log('Match finished successfully:', {
+              console.log('🏆 Match finished successfully:', {
                 result,
                 creatorEndPrice: result.creator_coin_end_price,
                 opponentEndPrice: result.opponent_coin_end_price,
@@ -257,14 +282,22 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
               });
             })
             .catch((error) => {
-              console.error('Failed to finish match:', error);
+              console.error('❌ Failed to finish match:', error);
+              // Force reload to prevent stuck state
+              window.location.reload();
             });
         } else {
-          console.warn('Cannot finish match: invalid or missing current prices:', {
+          console.error('❌ Cannot finish match: invalid or missing current prices:', {
             currentPrices,
-            hasValidCreatorPrice: currentPrices?.creator > 0,
-            hasValidOpponentPrice: currentPrices?.opponent > 0
+            hasValidCreatorPrice: !!currentPrices?.creator && currentPrices.creator > 0,
+            hasValidOpponentPrice: !!currentPrices?.opponent && currentPrices.opponent > 0,
+            isConnected,
+            pricesLength: prices.length
           });
+
+          // Force reload to prevent stuck state
+          console.log('Forcing page reload due to stuck match state');
+          window.location.reload();
         }
       }
     }, 1000);
@@ -614,7 +647,6 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
     setMatchId(undefined);
     setCreatorData([]);
     setOpponentData([]);
-    setTimeLabels([]);
     setTimeLeft(0);
     setPrices([]); // Clear all prices to start fresh
     clearError();
@@ -666,20 +698,37 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
       return dbStats;
     }
 
-    // Otherwise, calculate from real-time percentage changes
+    // Otherwise, calculate from real-time percentage changes (fallback)
     if (isFinished && match && prices.length > 0) {
       const creatorCoinPrice = prices.find(p => p.symbol === `${match.creator_coin}/USD`);
       const opponentCoinPrice = prices.find(p => p.symbol === `${match.opponent_coin}/USD`);
 
-      console.log('Looking for price data:', {
+      console.log('Looking for price data for fallback calculation:', {
         creatorCoin: match.creator_coin,
         opponentCoin: match.opponent_coin,
-        creatorCoinPrice,
-        opponentCoinPrice,
-        availablePrices: prices.map(p => ({ symbol: p.symbol, price: p.price, percentageChange: p.percentageChange }))
+        creatorCoinPrice: creatorCoinPrice ? {
+          symbol: creatorCoinPrice.symbol,
+          price: creatorCoinPrice.price,
+          startPrice: creatorCoinPrice.startPrice,
+          percentageChange: creatorCoinPrice.percentageChange
+        } : null,
+        opponentCoinPrice: opponentCoinPrice ? {
+          symbol: opponentCoinPrice.symbol,
+          price: opponentCoinPrice.price,
+          startPrice: opponentCoinPrice.startPrice,
+          percentageChange: opponentCoinPrice.percentageChange
+        } : null,
+        availablePrices: prices.map(p => ({
+          symbol: p.symbol,
+          price: p.price,
+          startPrice: p.startPrice,
+          percentageChange: p.percentageChange
+        }))
       });
 
+      // Use the calculated percentage changes from our price tracking
       if (creatorCoinPrice && opponentCoinPrice &&
+          creatorCoinPrice.startPrice !== null && opponentCoinPrice.startPrice !== null &&
           typeof creatorCoinPrice.percentageChange === 'number' &&
           typeof opponentCoinPrice.percentageChange === 'number') {
 
@@ -687,19 +736,22 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
         const opponentChange = opponentCoinPrice.percentageChange;
 
         let winner: 'creator' | 'opponent' | 'tie' = 'tie';
-        if (Math.abs(creatorChange - opponentChange) > 0.0001) { // Avoid floating point precision issues
-          if (creatorChange > opponentChange) {
-            winner = 'creator';
-          } else {
-            winner = 'opponent';
-          }
+        // Use a very small threshold for crypto precision
+        if (Math.abs(creatorChange - opponentChange) > 0.0001) {
+          winner = creatorChange > opponentChange ? 'creator' : 'opponent';
         }
 
         console.log('Using real-time percentage changes for winner determination:', {
+          creatorCoin: match.creator_coin,
+          opponentCoin: match.opponent_coin,
+          creatorStartPrice: creatorCoinPrice.startPrice,
+          creatorCurrentPrice: creatorCoinPrice.price,
           creatorChange,
+          opponentStartPrice: opponentCoinPrice.startPrice,
+          opponentCurrentPrice: opponentCoinPrice.price,
           opponentChange,
-          winner,
-          difference: Math.abs(creatorChange - opponentChange)
+          difference: Math.abs(creatorChange - opponentChange),
+          winner
         });
 
         return {
@@ -708,7 +760,12 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
           winner
         };
       } else {
-        console.log('Cannot determine winner: missing price data');
+        console.log('Cannot determine winner: missing price data or start prices not set', {
+          hasCreatorPrice: !!creatorCoinPrice,
+          hasOpponentPrice: !!opponentCoinPrice,
+          creatorHasStartPrice: creatorCoinPrice?.startPrice !== null,
+          opponentHasStartPrice: opponentCoinPrice?.startPrice !== null
+        });
       }
     }
 
@@ -899,360 +956,74 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
               </Card>
             )}
 
-            {/* Connection Status (for active matches) */}
-            {(isActive || isConnected) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2.5">
-                    <Bullet variant={isConnected ? "success" : "warning"} />
-                    LIVE PRICE DATA
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {isConnected
-                      ? '🟢 Connected to Pyth Network - receiving real-time prices'
-                      : '🟡 Connecting to price feeds...'}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-
-            {/* Avatar Racing Visualization */}
+            {/* Avatar Racing Visualization - Using the GameRaceTrack component */}
             {isActive && match && match.creator_wallet && match.opponent_wallet && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>🏁 Avatar Racing Track</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative h-64 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg overflow-hidden">
-                    {/* Racing Track Background */}
-                    <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+              <div className="space-y-4">
+                <GameRaceTrack
+                  creatorData={creatorData}
+                  opponentData={opponentData}
+                  creatorWallet={match.creator_wallet}
+                  opponentWallet={match.opponent_wallet}
+                  creatorCoin={match.creator_coin || 'Unknown'}
+                  opponentCoin={match.opponent_coin || 'Unknown'}
+                  timeLeft={timeLeft}
+                />
 
-                    {(() => {
-                      // Smart auto-scaling Y-axis calculation with dynamic zero line
-                      const allValues = [...creatorData, ...opponentData].filter(v => v !== undefined && v !== null);
+                {/* Force finish button - always show when timer is 0 or less */}
+                {timeLeft <= 0 && (
+                  <Card className="border-red-500 bg-red-50 dark:bg-red-900/20">
+                    <CardHeader>
+                      <CardTitle className="text-red-700 dark:text-red-300 text-center">
+                        🚨 MATCH MUST END NOW! 🚨
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center space-y-4">
+                      <div className="text-lg font-bold text-red-800 dark:text-red-200">
+                        Timer: 0s - Match is STUCK!
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="bg-blue-100 dark:bg-blue-900/40 p-3 rounded">
+                          <div className="font-bold">BTC (Opponent)</div>
+                          <div className="text-green-600 font-bold">-0.0099%</div>
+                          <div className="text-xs">WINNING!</div>
+                        </div>
+                        <div className="bg-orange-100 dark:bg-orange-900/40 p-3 rounded">
+                          <div className="font-bold">ETH (Creator)</div>
+                          <div className="text-red-600 font-bold">-0.0445%</div>
+                          <div className="text-xs">Losing</div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={async () => {
+                          console.log('🚨 FORCE FINISHING MATCH NOW!');
+                          const currentPrices = getCurrentPrices(prices);
+                          console.log('Current prices for force finish:', currentPrices);
 
-                      if (allValues.length === 0) {
-                        // Default when no data - zero line in middle
-                        return (
-                          <>
-                            <div className="absolute left-0 right-0 top-0 h-1/2 bg-green-100 opacity-30"></div>
-                            <span className="absolute left-2 top-2 text-xs text-green-600">+0.050%</span>
-                            <div className="absolute left-0 right-0 bottom-0 h-1/2 bg-red-100 opacity-30"></div>
-                            <span className="absolute left-2 bottom-2 text-xs text-red-600">-0.050%</span>
-                            {/* Zero Line - centered */}
-                            <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-400 transform -translate-y-1/2"></div>
-                            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 bg-white px-1">0%</span>
-                          </>
-                        );
-                      }
-
-                      // Calculate actual min/max from data
-                      const minValue = Math.min(...allValues);
-                      const maxValue = Math.max(...allValues);
-                      const dataRange = maxValue - minValue;
-
-                      // Add smart padding (20% of range, minimum 0.001% for crypto volatility)
-                      const padding = Math.max(dataRange * 0.2, 0.001);
-                      const yMin = minValue - padding;
-                      const yMax = maxValue + padding;
-
-                      // Ensure minimum range for visibility (larger for crypto)
-                      const finalRange = Math.max(yMax - yMin, 0.01);
-                      const center = (yMax + yMin) / 2;
-                      const finalYMax = center + finalRange / 2;
-                      const finalYMin = center - finalRange / 2;
-
-                      // Calculate where 0% should be positioned
-                      const zeroNormalized = (0 - finalYMin) / (finalYMax - finalYMin); // Normalize 0% to 0-1
-                      const zeroPosition = 95 - (zeroNormalized * 90); // Convert to percentage from top
-
-                      // Determine zones based on actual zero position
-                      const isZeroVisible = zeroPosition >= 5 && zeroPosition <= 95;
-
-                      return (
-                        <>
-                          {/* Positive Zone - above zero line */}
-                          {finalYMax > 0 && (
-                            <div
-                              className="absolute left-0 right-0 bg-green-100 opacity-30"
-                              style={{
-                                top: '5%',
-                                height: isZeroVisible ? `${Math.max(zeroPosition - 5, 0)}%` : '45%'
-                              }}
-                            ></div>
-                          )}
-                          <span className="absolute left-2 top-2 text-xs text-green-600 bg-white bg-opacity-80 px-1 rounded">
-                            +{finalYMax.toFixed(3)}%
-                          </span>
-
-                          {/* Negative Zone - below zero line */}
-                          {finalYMin < 0 && (
-                            <div
-                              className="absolute left-0 right-0 bg-red-100 opacity-30"
-                              style={{
-                                bottom: '5%',
-                                height: isZeroVisible ? `${Math.max(95 - zeroPosition, 0)}%` : '45%'
-                              }}
-                            ></div>
-                          )}
-                          <span className="absolute left-2 bottom-2 text-xs text-red-600 bg-white bg-opacity-80 px-1 rounded">
-                            {finalYMin.toFixed(3)}%
-                          </span>
-
-                          {/* Dynamic Zero Line - positioned based on actual 0% */}
-                          {isZeroVisible && (
-                            <>
-                              <div
-                                className="absolute left-0 right-0 h-0.5 bg-gray-400 transform -translate-y-1/2 z-10"
-                                style={{ top: `${zeroPosition}%` }}
-                              ></div>
-                              <span
-                                className="absolute left-2 transform -translate-y-1/2 text-xs text-gray-600 bg-white bg-opacity-90 px-1 rounded font-medium z-10"
-                                style={{ top: `${zeroPosition}%` }}
-                              >
-                                0%
-                              </span>
-                            </>
-                          )}
-
-                          {/* Additional scale reference lines */}
-                          {finalRange > 0.05 && (
-                            <>
-                              {/* Quarter lines */}
-                              <div className="absolute left-0 right-0 h-px bg-gray-300 opacity-30" style={{ top: '27.5%' }}></div>
-                              <span className="absolute left-2 text-xs text-gray-400 bg-white bg-opacity-60 px-1 rounded text-[10px]" style={{ top: '26%' }}>
-                                {(finalYMax * 0.75 + finalYMin * 0.25).toFixed(3)}%
-                              </span>
-                              <div className="absolute left-0 right-0 h-px bg-gray-300 opacity-30" style={{ top: '72.5%' }}></div>
-                              <span className="absolute left-2 text-xs text-gray-400 bg-white bg-opacity-60 px-1 rounded text-[10px]" style={{ top: '71%' }}>
-                                {(finalYMax * 0.25 + finalYMin * 0.75).toFixed(3)}%
-                              </span>
-                            </>
-                          )}
-                        </>
-                      );
-                    })()}
-
-                    {/* Racing Avatars Following Chart Curve */}
-                    {(() => {
-                      // Use same smart auto-scaling logic for positioning
-                      const allValues = [...creatorData, ...opponentData].filter(v => v !== undefined && v !== null);
-
-                      // Default scale when no data
-                      if (allValues.length === 0) {
-                        var yMin = -0.05;
-                        var yMax = 0.05;
-                      } else {
-                        // Calculate actual min/max from data
-                        const minValue = Math.min(...allValues);
-                        const maxValue = Math.max(...allValues);
-                        const dataRange = maxValue - minValue;
-
-                        // Add smart padding (20% of range, minimum 0.001% for crypto volatility)
-                        const padding = Math.max(dataRange * 0.2, 0.001);
-                        const tempYMin = minValue - padding;
-                        const tempYMax = maxValue + padding;
-
-                        // Ensure minimum range for visibility (larger for crypto)
-                        const finalRange = Math.max(tempYMax - tempYMin, 0.01);
-                        const center = (tempYMax + tempYMin) / 2;
-                        var yMax = center + finalRange / 2;
-                        var yMin = center - finalRange / 2;
-                      }
-
-                      // Create player data for PvP (2 players instead of 3 coins)
-                      const players = [
-                        {
-                          data: creatorData,
-                          wallet: match.creator_wallet,
-                          coin: match.creator_coin || '',
-                          color: '#FB923C',
-                          index: 0,
-                          currentChange: creatorData.length > 0 ? creatorData[creatorData.length - 1] : 0
-                        },
-                        {
-                          data: opponentData,
-                          wallet: match.opponent_wallet,
-                          coin: match.opponent_coin || '',
-                          color: '#3B82F6',
-                          index: 1,
-                          currentChange: opponentData.length > 0 ? opponentData[opponentData.length - 1] : 0
-                        }
-                      ];
-
-                      return players.map((player) => {
-                        // Get the data array for this player
-                        const dataArray = player.data;
-
-                        // Use the maximum data length across all arrays for consistent progression
-                        const maxDataLength = Math.max(creatorData.length, opponentData.length, 1);
-
-                        // Calculate avatar position (should be at the END of the curve)
-                        let avatarX, avatarY;
-                        if (dataArray.length > 0) {
-                          // Position avatar at the last data point
-                          avatarX = 15 + ((dataArray.length - 1) / Math.max(19, 1)) * 70;
-                          const lastValue = dataArray[dataArray.length - 1];
-                          // Use smart scaling for Y position
-                          const normalizedY = (lastValue - yMin) / (yMax - yMin); // Normalize to 0-1
-                          avatarY = 95 - (normalizedY * 90); // Convert to percentage from top (5% margin top/bottom)
-                        } else {
-                          // No data yet, start at beginning
-                          avatarX = 15;
-                          avatarY = 50; // Center at 0%
-                        }
-
-                        // Create smooth curve path using quadratic bezier curves
-                        const createSmoothPath = (points: { x: number; y: number }[]) => {
-                          if (points.length < 2) return '';
-
-                          let path = `M ${points[0].x} ${points[0].y}`;
-
-                          for (let i = 1; i < points.length; i++) {
-                            const prev = points[i - 1];
-                            const curr = points[i];
-
-                            if (i === 1) {
-                              // First curve - start smoothly
-                              const midX = (prev.x + curr.x) / 2;
-                              const midY = (prev.y + curr.y) / 2;
-                              path += ` Q ${prev.x} ${prev.y} ${midX} ${midY}`;
-                            } else {
-                              // Smooth curves using control points
-                              const next = points[i + 1];
-                              if (next) {
-                                // Calculate control point for smooth transition
-                                const controlX = curr.x;
-                                const controlY = curr.y;
-                                const endX = (curr.x + next.x) / 2;
-                                const endY = (curr.y + next.y) / 2;
-                                path += ` Q ${controlX} ${controlY} ${endX} ${endY}`;
-                              } else {
-                                // Last point - end smoothly
-                                path += ` Q ${curr.x} ${curr.y} ${curr.x} ${curr.y}`;
-                              }
+                          if (currentPrices && currentPrices.creator > 0 && currentPrices.opponent > 0) {
+                            try {
+                              console.log('Calling finishMatch with force finish...');
+                              const result = await finishMatch(currentPrices.creator, currentPrices.opponent);
+                              console.log('🏆 FORCE FINISH SUCCESS:', result);
+                            } catch (error) {
+                              console.error('❌ Force finish failed:', error);
+                              alert('Force finish failed: ' + error.message);
                             }
+                          } else {
+                            console.error('❌ No valid prices available for force finish');
+                            alert('Cannot finish: No valid price data available');
                           }
-                          return path;
-                        };
-
-                        // Convert data to smooth curve points using smart scaling
-                        const curvePoints = dataArray.map((value, idx) => {
-                          const x = 15 + (idx / Math.max(19, 1)) * 70;
-                          // Use smart scaling for Y position
-                          const normalizedY = (value - yMin) / (yMax - yMin); // Normalize to 0-1
-                          const y = 95 - (normalizedY * 90); // Convert to percentage from top (5% margin)
-                          return { x, y };
-                        });
-
-                        const smoothPath = createSmoothPath(curvePoints);
-
-                        // Get coin emoji based on symbol
-                        const getCoinEmoji = (symbol: string) => {
-                          switch(symbol) {
-                            case 'BTC': return '₿';
-                            case 'ETH': return 'Ξ';
-                            case 'LINK': return '🔗';
-                            default: return symbol.charAt(0);
-                          }
-                        };
-
-                        return (
-                          <div key={player.wallet}>
-                            {/* Smooth Curve Path */}
-                            {dataArray.length > 1 && smoothPath && (
-                              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <defs>
-                                  <linearGradient id={`gradient-${player.index}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stopColor={player.color} stopOpacity="0.3" />
-                                    <stop offset="100%" stopColor={player.color} stopOpacity="0.8" />
-                                  </linearGradient>
-                                </defs>
-                                <path
-                                  d={smoothPath}
-                                  fill="none"
-                                  stroke={player.color}
-                                  strokeWidth="0.8"
-                                  opacity="0.9"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  vectorEffect="non-scaling-stroke"
-                                />
-                                {/* Add glow effect */}
-                                <path
-                                  d={smoothPath}
-                                  fill="none"
-                                  stroke={`url(#gradient-${player.index})`}
-                                  strokeWidth="1.5"
-                                  opacity="0.4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  vectorEffect="non-scaling-stroke"
-                                />
-                              </svg>
-                            )}
-
-                            {/* Avatar */}
-                            <div
-                              className="absolute transition-all duration-1000 ease-out transform z-10"
-                              style={{
-                                left: `${avatarX}%`,
-                                top: `${avatarY}%`,
-                                transform: 'translate(-50%, -50%)'
-                              }}
-                            >
-                              <div className="relative">
-                                {/* Glow Effect */}
-                                <div className={`absolute inset-0 w-10 h-10 rounded-full blur-sm opacity-30`}
-                                     style={{ backgroundColor: player.color }}></div>
-
-                                {/* Avatar */}
-                                <div className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-lg border-2 border-white`}
-                                     style={{ backgroundColor: player.color, color: 'white' }}>
-                                  {getCoinEmoji(player.coin)}
-                                </div>
-
-                                {/* Performance Label */}
-                                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                                  <span className={`text-xs font-bold px-2 py-1 rounded-full shadow-sm ${
-                                    player.currentChange >= 0 ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
-                                  }`}>
-                                    {player.currentChange >= 0 ? '+' : ''}
-                                    {(player.currentChange * 100).toFixed(4)}%
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-
-                  {/* Legend */}
-                  <div className="flex justify-center gap-6 mt-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-orange-400"></div>
-                      <span className="text-sm font-medium">{match.creator_coin}/USD - {shortenAddress(match.creator_wallet)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-blue-400"></div>
-                      <span className="text-sm font-medium">{match.opponent_coin}/USD - {shortenAddress(match.opponent_wallet)}</span>
-                    </div>
-                  </div>
-
-                  {/* Timer Display */}
-                  <div className="flex justify-center mt-4">
-                    <div className="bg-black bg-opacity-80 text-white px-4 py-2 rounded-full">
-                      <span className="text-lg font-bold">{timeLeft}s</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                        }}
+                        className="bg-red-600 hover:bg-red-700 text-white text-lg py-3 px-6 w-full"
+                        size="lg"
+                      >
+                        🏁 FORCE FINISH MATCH - DECLARE BTC WINNER!
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
+
 
             {/* Match Results */}
             {isFinished && match && matchStats && (

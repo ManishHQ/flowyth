@@ -1,100 +1,172 @@
-'use client';
+import { useState, useEffect, useCallback } from 'react';
+import { TournamentService, Tournament, TournamentParticipant, Squad } from '@/lib/services/tournament-service';
 
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits } from 'viem';
+export function useTournaments() {
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-// TODO: Import actual contract ABIs and addresses
-// import { TOURNAMENT_FACTORY_ABI, TOURNAMENT_FACTORY_ADDRESS } from '@/lib/contracts/tournament-factory';
-// import { MOCK_USDC_ABI, MOCK_USDC_ADDRESS } from '@/lib/contracts/mock-usdc';
-
-export function useTournamentActions() {
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-
-  const createTournament = async (params: {
-    title: string;
-    entryFee: string; // in USDC
-    duration: number; // in seconds
-    registrationPeriod: number; // in seconds
-    maxParticipants: number;
-  }) => {
+  const fetchTournaments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      // TODO: Implement contract call
-      // const entryFeeWei = parseUnits(params.entryFee, 6); // USDC has 6 decimals
-
-      // await writeContract({
-      //   address: TOURNAMENT_FACTORY_ADDRESS,
-      //   abi: TOURNAMENT_FACTORY_ABI,
-      //   functionName: 'createTournament',
-      //   args: [
-      //     params.title,
-      //     entryFeeWei,
-      //     BigInt(params.duration),
-      //     BigInt(params.registrationPeriod),
-      //     BigInt(params.maxParticipants)
-      //   ]
-      // });
-
-      console.log('Creating tournament with params:', params);
-      throw new Error('Tournament creation not yet implemented');
-    } catch (error) {
-      console.error('Failed to create tournament:', error);
-      throw error;
+      const tournamentsData = await TournamentService.getTournaments();
+      setTournaments(tournamentsData);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tournaments';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const joinTournament = async (tournamentAddress: string, entryFee: string) => {
-    try {
-      // TODO: First approve USDC, then join tournament
-      // const entryFeeWei = parseUnits(entryFee, 6);
-
-      // Step 1: Approve USDC
-      // await writeContract({
-      //   address: MOCK_USDC_ADDRESS,
-      //   abi: MOCK_USDC_ABI,
-      //   functionName: 'approve',
-      //   args: [tournamentAddress, entryFeeWei]
-      // });
-
-      // Step 2: Join tournament
-      // await writeContract({
-      //   address: tournamentAddress,
-      //   abi: TOURNAMENT_ABI,
-      //   functionName: 'register',
-      //   args: []
-      // });
-
-      console.log('Joining tournament:', tournamentAddress, 'with entry fee:', entryFee);
-      throw new Error('Tournament joining not yet implemented');
-    } catch (error) {
-      console.error('Failed to join tournament:', error);
-      throw error;
-    }
-  };
-
-  const getUSDCFaucet = async () => {
-    try {
-      // TODO: Implement USDC faucet call
-      // await writeContract({
-      //   address: MOCK_USDC_ADDRESS,
-      //   abi: MOCK_USDC_ABI,
-      //   functionName: 'faucet',
-      //   args: []
-      // });
-
-      console.log('Getting USDC from faucet');
-      throw new Error('USDC faucet not yet implemented');
-    } catch (error) {
-      console.error('Failed to get USDC faucet:', error);
-      throw error;
-    }
-  };
+  useEffect(() => {
+    fetchTournaments();
+  }, [fetchTournaments]);
 
   return {
-    createTournament,
-    joinTournament,
-    getUSDCFaucet,
-    isPending: isPending || isConfirming,
-    isSuccess
+    tournaments,
+    loading,
+    error,
+    refetch: fetchTournaments,
+  };
+}
+
+export function useTournament(tournamentAddress: string) {
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTournament = useCallback(async () => {
+    if (!tournamentAddress) return;
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const [tournamentData, participantsData] = await Promise.all([
+        TournamentService.getTournament(tournamentAddress),
+        TournamentService.getTournamentParticipants(tournamentAddress)
+      ]);
+
+      setTournament(tournamentData);
+      setParticipants(participantsData);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tournament';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [tournamentAddress]);
+
+  useEffect(() => {
+    fetchTournament();
+  }, [fetchTournament]);
+
+  return {
+    tournament,
+    participants,
+    loading,
+    error,
+    refetch: fetchTournament,
+  };
+}
+
+export function useTournamentRegistration() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const registerForTournament = useCallback(async (
+    tournamentAddress: string,
+    playerAddress: string,
+    squad: Squad['tokens']
+  ) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      await TournamentService.registerForTournament(tournamentAddress, playerAddress, squad);
+      
+      // Also save squad to database
+      await TournamentService.saveSquad({
+        tournamentAddress,
+        playerAddress,
+        tokens: squad,
+      });
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to register for tournament';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    registerForTournament,
+    loading,
+    error,
+  };
+}
+
+export function useSquad(tournamentAddress: string, playerAddress: string) {
+  const [squad, setSquad] = useState<Squad | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSquad = useCallback(async () => {
+    if (!tournamentAddress || !playerAddress) return;
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const squadData = await TournamentService.getSquad(tournamentAddress, playerAddress);
+      setSquad(squadData);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch squad';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [tournamentAddress, playerAddress]);
+
+  const saveSquad = useCallback(async (tokens: Squad['tokens']) => {
+    if (!tournamentAddress || !playerAddress) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const savedSquad = await TournamentService.saveSquad({
+        tournamentAddress,
+        playerAddress,
+        tokens,
+      });
+      setSquad(savedSquad);
+      return savedSquad;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save squad';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [tournamentAddress, playerAddress]);
+
+  useEffect(() => {
+    fetchSquad();
+  }, [fetchSquad]);
+
+  return {
+    squad,
+    loading,
+    error,
+    saveSquad,
+    refetch: fetchSquad,
   };
 }
