@@ -2,5 +2,7 @@
   "UpdatedCryptoFantasyLeagueModule#CryptoFantasyLeague": "0x278d970D518F2c9199897cbBCa0d6f2B4C2712Ea",
   "CryptoFantasyLeagueV2Module#CryptoFantasyLeagueV2": "0x2D01EC2eAA57e798559defba249bEc989Dc8d70F",
   "PredictionMarketModule#MockUSDC": "0xa84c00A7761D4951FBF8146A5f3754ee659BDc76",
-  "PredictionMarketModule#PredictionMarket": "0x704B8B3B9E32675Df0E5659AB16dDEfEa569C697"
+  "PredictionMarketModule#PredictionMarket": "0x704B8B3B9E32675Df0E5659AB16dDEfEa569C697",
+  "GroupTournamentModule#GroupTournament": "0x9cCC7c4BAd107Dc5Dc52c1E85C8a889944D63B26",
+  "GroupTournamentModule#MockUSDC": "0x3C6d07830cdfd72e1b0743885558F32e7eB184d3"
 }

@@ -213,18 +213,14 @@ export class PvpService {
       difference: Math.abs(creatorChange - opponentChange).toFixed(6) + '%'
     });
 
-    // Determine winner with very precise comparison
-    let winnerWallet: string | null = null;
-    if (Math.abs(creatorChange - opponentChange) > 0.000001) { // Use same threshold as calculateMatchStats
-      if (creatorChange > opponentChange) {
-        winnerWallet = match.creator_wallet;
-        console.log('🏆 Creator wins!', creatorChange, '% >', opponentChange, '%');
-      } else {
-        winnerWallet = match.opponent_wallet;
-        console.log('🏆 Opponent wins!', opponentChange, '% >', creatorChange, '%');
-      }
+    // Always determine a winner - no ties!
+    let winnerWallet: string;
+    if (creatorChange >= opponentChange) {
+      winnerWallet = match.creator_wallet;
+      console.log('🏆 Creator wins!', creatorChange, '% >=', opponentChange, '%');
     } else {
-      console.log('🤝 It\'s a tie!', creatorChange, '% ≈', opponentChange, '%');
+      winnerWallet = match.opponent_wallet;
+      console.log('🏆 Opponent wins!', opponentChange, '% >', creatorChange, '%');
     }
 
     console.log('💾 Updating database with:', {
@@ -396,7 +392,7 @@ export class PvpService {
   static calculateMatchStats(match: PvpMatch): {
     creatorChange: number;
     opponentChange: number;
-    winner: 'creator' | 'opponent' | 'tie';
+    winner: 'creator' | 'opponent';
   } {
     console.log('🔍 PvpService.calculateMatchStats called with match:', {
       id: match.id,
@@ -427,21 +423,14 @@ export class PvpService {
       isExactTie: creatorChange === opponentChange
     });
 
-    let winner: 'creator' | 'opponent' | 'tie' = 'tie';
-    if (Math.abs(creatorChange - opponentChange) > 0.000001) { // Use very small threshold
-      if (creatorChange > opponentChange) {
-        winner = 'creator';
-      } else {
-        winner = 'opponent';
-      }
-    }
+    // Always declare a winner - no ties allowed!
+    let winner: 'creator' | 'opponent' = creatorChange >= opponentChange ? 'creator' : 'opponent';
 
     console.log('🏆 Winner determination result:', {
       winner,
       creatorChange: creatorChange + '%',
       opponentChange: opponentChange + '%',
-      reason: winner === 'tie' ? 'Changes are equal or within threshold' :
-              winner === 'creator' ? 'Creator performed better' : 'Opponent performed better'
+      reason: winner === 'creator' ? 'Creator performed better or equal' : 'Opponent performed better'
     });
 
     return {

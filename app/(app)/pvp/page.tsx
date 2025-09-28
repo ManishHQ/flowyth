@@ -46,7 +46,7 @@ export default function PvPLobbyPage() {
               🔥 PVP CRYPTO DUEL
             </h1>
             <p className="text-muted-foreground text-base sm:text-lg">
-              Real-time 1v1 crypto price battles powered by Pyth Network
+              Real-time 1v1 crypto price battles powered by Flow chain and Pyth Network
             </p>
           </div>
 

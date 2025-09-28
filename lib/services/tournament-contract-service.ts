@@ -407,18 +407,23 @@ export class TournamentContractService {
   static async getSupportedCryptos(): Promise<{ pythId: string; symbol: string; name: string }[]> {
     try {
       const contract = this.getTournamentContract();
-      const count = await contract.read.getSupportedCryptosCount();
       const cryptos = [];
 
-      for (let i = 0; i < Number(count); i++) {
-        const pythId = await contract.read.supportedCryptos([BigInt(i)]);
-        const asset = await contract.read.cryptoAssets([pythId]);
-        
-        cryptos.push({
-          pythId: asset[0], // pythId
-          symbol: asset[1], // symbol
-          name: asset[2], // name
-        });
+      // Try to read supported cryptos by index until we hit an error
+      for (let i = 0; i < 20; i++) { // Max 20 cryptos
+        try {
+          const pythId = await contract.read.supportedCryptos([BigInt(i)]);
+          const asset = await contract.read.cryptoAssets([pythId]);
+          
+          cryptos.push({
+            pythId: asset[0], // pythId
+            symbol: asset[1], // symbol
+            name: asset[2], // name
+          });
+        } catch (error) {
+          // No more cryptos available
+          break;
+        }
       }
 
       return cryptos;

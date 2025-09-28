@@ -2,7 +2,7 @@
 export const TOURNAMENT_CONTRACTS = {
   // Flow EVM Testnet addresses (update with actual deployed addresses)
   GROUP_TOURNAMENT: {
-    address: '0x0000000000000000000000000000000000000000', // TODO: Update with deployed address
+    address: '0x9cCC7c4BAd107Dc5Dc52c1E85C8a889944D63B26', // Deployed on Flow EVM Testnet
     abi: [
       // Tournament Management
       {
@@ -179,7 +179,7 @@ export const TOURNAMENT_CONTRACTS = {
   },
 
   MOCK_USDC: {
-    address: '0x0000000000000000000000000000000000000000', // TODO: Update with deployed address
+    address: '0x3C6d07830cdfd72e1b0743885558F32e7eB184d3', // Deployed on Flow EVM Testnet
     abi: [
       {
         name: 'transfer',

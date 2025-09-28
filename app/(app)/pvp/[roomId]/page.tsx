@@ -15,6 +15,7 @@ import { GameRaceTrack } from '@/components/pvp/GameRaceTrack';
 import { getUserAvatar, shortenAddress } from '@/lib/utils/avatar';
 import type { AvailableToken } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { UserService } from '@/lib/services/user-service';
 
 interface PriceData {
   id: string;
@@ -65,6 +66,7 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [selectedDuration, setSelectedDuration] = useState(60);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
 
   // Price streaming state
   const [isConnected, setIsConnected] = useState(false);
@@ -304,6 +306,23 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
 
     return () => clearInterval(timer);
   }, [isActive, getTimeRemaining, match, isConnected, getCurrentPrices, prices, finishMatch]);
+
+  // Load user profiles for match participants
+  useEffect(() => {
+    if (match?.creator_wallet && match?.opponent_wallet) {
+      const loadUserProfiles = async () => {
+        try {
+          const wallets = [match.creator_wallet, match.opponent_wallet].filter((wallet): wallet is string => Boolean(wallet));
+          const profiles = await UserService.getUsersByWallets(wallets);
+          setUserProfiles(profiles);
+        } catch (error) {
+          console.error('Failed to load user profiles:', error);
+        }
+      };
+
+      loadUserProfiles();
+    }
+  }, [match?.creator_wallet, match?.opponent_wallet]);
 
   // Switch to match view when match is created/joined
   useEffect(() => {
@@ -675,102 +694,74 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
   }, [match?.status, match?.id]);
 
   const userRole = getUserRole();
-  // Get match stats, but if database end prices aren't available, use real-time data
-  const matchStats = (() => {
-    const dbStats = getMatchStats();
 
-    console.log('Winner determination debug info:', {
-      isFinished,
-      hasMatch: !!match,
-      matchId: match?.id,
-      status: match?.status,
-      creatorEndPrice: match?.creator_coin_end_price,
-      opponentEndPrice: match?.opponent_coin_end_price,
-      creatorStartPrice: match?.creator_coin_start_price,
-      opponentStartPrice: match?.opponent_coin_start_price,
-      dbStats,
-      pricesCount: prices.length
+  // Helper function to get user display info
+  const getUserDisplayInfo = (walletAddress: string) => {
+    const profile = userProfiles[walletAddress];
+    return {
+      displayName: profile?.username || profile?.full_name || shortenAddress(walletAddress),
+      avatar: profile?.photo_url || getUserAvatar(walletAddress),
+      username: profile?.username || shortenAddress(walletAddress)
+    };
+  };
+  // Calculate match stats using database start/end prices for accuracy
+  const matchStats = (() => {
+    if (!match || !isFinished) return null;
+
+    console.log('🔍 Calculating match stats from database start/end prices:', {
+      matchId: match.id,
+      status: match.status,
+      creatorCoin: match.creator_coin,
+      opponentCoin: match.opponent_coin,
+      creatorStartPrice: match.creator_coin_start_price,
+      creatorEndPrice: match.creator_coin_end_price,
+      opponentStartPrice: match.opponent_coin_start_price,
+      opponentEndPrice: match.opponent_coin_end_price,
+      winnerWallet: match.winner_wallet
     });
 
-    // If database has proper end prices, use those
-    if (dbStats && match?.creator_coin_end_price && match?.opponent_coin_end_price) {
-      console.log('Using database stats for winner determination:', dbStats);
-      return dbStats;
+    // Calculate percentage changes from database start/end prices
+    let creatorChange = 0;
+    let opponentChange = 0;
+
+    if (match.creator_coin_start_price && match.creator_coin_end_price && match.creator_coin_start_price > 0) {
+      creatorChange = ((match.creator_coin_end_price - match.creator_coin_start_price) / match.creator_coin_start_price) * 100;
     }
 
-    // Otherwise, calculate from real-time percentage changes (fallback)
-    if (isFinished && match && prices.length > 0) {
-      const creatorCoinPrice = prices.find(p => p.symbol === `${match.creator_coin}/USD`);
-      const opponentCoinPrice = prices.find(p => p.symbol === `${match.opponent_coin}/USD`);
-
-      console.log('Looking for price data for fallback calculation:', {
-        creatorCoin: match.creator_coin,
-        opponentCoin: match.opponent_coin,
-        creatorCoinPrice: creatorCoinPrice ? {
-          symbol: creatorCoinPrice.symbol,
-          price: creatorCoinPrice.price,
-          startPrice: creatorCoinPrice.startPrice,
-          percentageChange: creatorCoinPrice.percentageChange
-        } : null,
-        opponentCoinPrice: opponentCoinPrice ? {
-          symbol: opponentCoinPrice.symbol,
-          price: opponentCoinPrice.price,
-          startPrice: opponentCoinPrice.startPrice,
-          percentageChange: opponentCoinPrice.percentageChange
-        } : null,
-        availablePrices: prices.map(p => ({
-          symbol: p.symbol,
-          price: p.price,
-          startPrice: p.startPrice,
-          percentageChange: p.percentageChange
-        }))
-      });
-
-      // Use the calculated percentage changes from our price tracking
-      if (creatorCoinPrice && opponentCoinPrice &&
-          creatorCoinPrice.startPrice !== null && opponentCoinPrice.startPrice !== null &&
-          typeof creatorCoinPrice.percentageChange === 'number' &&
-          typeof opponentCoinPrice.percentageChange === 'number') {
-
-        const creatorChange = creatorCoinPrice.percentageChange;
-        const opponentChange = opponentCoinPrice.percentageChange;
-
-        let winner: 'creator' | 'opponent' | 'tie' = 'tie';
-        // Use a very small threshold for crypto precision
-        if (Math.abs(creatorChange - opponentChange) > 0.0001) {
-          winner = creatorChange > opponentChange ? 'creator' : 'opponent';
-        }
-
-        console.log('Using real-time percentage changes for winner determination:', {
-          creatorCoin: match.creator_coin,
-          opponentCoin: match.opponent_coin,
-          creatorStartPrice: creatorCoinPrice.startPrice,
-          creatorCurrentPrice: creatorCoinPrice.price,
-          creatorChange,
-          opponentStartPrice: opponentCoinPrice.startPrice,
-          opponentCurrentPrice: opponentCoinPrice.price,
-          opponentChange,
-          difference: Math.abs(creatorChange - opponentChange),
-          winner
-        });
-
-        return {
-          creatorChange,
-          opponentChange,
-          winner
-        };
-      } else {
-        console.log('Cannot determine winner: missing price data or start prices not set', {
-          hasCreatorPrice: !!creatorCoinPrice,
-          hasOpponentPrice: !!opponentCoinPrice,
-          creatorHasStartPrice: creatorCoinPrice?.startPrice !== null,
-          opponentHasStartPrice: opponentCoinPrice?.startPrice !== null
-        });
-      }
+    if (match.opponent_coin_start_price && match.opponent_coin_end_price && match.opponent_coin_start_price > 0) {
+      opponentChange = ((match.opponent_coin_end_price - match.opponent_coin_start_price) / match.opponent_coin_start_price) * 100;
     }
 
-    console.log('Falling back to database stats (might be null):', dbStats);
-    return dbStats; // Fallback to database stats
+    // Determine winner based on percentage changes
+    let winner: 'creator' | 'opponent';
+    if (match.winner_wallet === match.creator_wallet) {
+      winner = 'creator';
+    } else if (match.winner_wallet === match.opponent_wallet) {
+      winner = 'opponent';
+    } else {
+      // Fallback: calculate winner from percentage changes
+      winner = creatorChange >= opponentChange ? 'creator' : 'opponent';
+    }
+
+    console.log('📊 Calculated percentage changes from database:', {
+      creatorCoin: match.creator_coin,
+      creatorStartPrice: match.creator_coin_start_price,
+      creatorEndPrice: match.creator_coin_end_price,
+      creatorChange: creatorChange.toFixed(6) + '%',
+      opponentCoin: match.opponent_coin,
+      opponentStartPrice: match.opponent_coin_start_price,
+      opponentEndPrice: match.opponent_coin_end_price,
+      opponentChange: opponentChange.toFixed(6) + '%',
+      winner,
+      winnerFromDb: match.winner_wallet,
+      difference: Math.abs(creatorChange - opponentChange).toFixed(6) + '%'
+    });
+
+    return {
+      creatorChange,
+      opponentChange,
+      winner
+    };
   })();
 
   // Render different screens based on game mode
@@ -969,162 +960,222 @@ export default function PvPRoomPage({ params }: PvPRoomPageProps) {
                   timeLeft={timeLeft}
                 />
 
-                {/* Force finish button - always show when timer is 0 or less */}
-                {timeLeft <= 0 && (
-                  <Card className="border-red-500 bg-red-50 dark:bg-red-900/20">
-                    <CardHeader>
-                      <CardTitle className="text-red-700 dark:text-red-300 text-center">
-                        🚨 MATCH MUST END NOW! 🚨
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center space-y-4">
-                      <div className="text-lg font-bold text-red-800 dark:text-red-200">
-                        Timer: 0s - Match is STUCK!
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="bg-blue-100 dark:bg-blue-900/40 p-3 rounded">
-                          <div className="font-bold">BTC (Opponent)</div>
-                          <div className="text-green-600 font-bold">-0.0099%</div>
-                          <div className="text-xs">WINNING!</div>
-                        </div>
-                        <div className="bg-orange-100 dark:bg-orange-900/40 p-3 rounded">
-                          <div className="font-bold">ETH (Creator)</div>
-                          <div className="text-red-600 font-bold">-0.0445%</div>
-                          <div className="text-xs">Losing</div>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={async () => {
-                          console.log('🚨 FORCE FINISHING MATCH NOW!');
-                          const currentPrices = getCurrentPrices(prices);
-                          console.log('Current prices for force finish:', currentPrices);
+                {/* Auto-declare winner when timer reaches 0 AND match is active */}
+                {timeLeft <= 0 && isActive && match?.status === 'in_progress' && (() => {
+                  // Get current performance from live price data
+                  const creatorCoinPrice = prices.find(p => p.symbol === `${match.creator_coin}/USD`);
+                  const opponentCoinPrice = prices.find(p => p.symbol === `${match.opponent_coin}/USD`);
 
-                          if (currentPrices && currentPrices.creator > 0 && currentPrices.opponent > 0) {
-                            try {
-                              console.log('Calling finishMatch with force finish...');
-                              const result = await finishMatch(currentPrices.creator, currentPrices.opponent);
-                              console.log('🏆 FORCE FINISH SUCCESS:', result);
-                            } catch (error) {
-                              console.error('❌ Force finish failed:', error);
-                              alert('Force finish failed: ' + error.message);
-                            }
-                          } else {
-                            console.error('❌ No valid prices available for force finish');
-                            alert('Cannot finish: No valid price data available');
-                          }
-                        }}
-                        className="bg-red-600 hover:bg-red-700 text-white text-lg py-3 px-6 w-full"
-                        size="lg"
-                      >
-                        🏁 FORCE FINISH MATCH - DECLARE BTC WINNER!
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
+                  if (creatorCoinPrice && opponentCoinPrice) {
+                    const creatorChange = creatorCoinPrice.percentageChange;
+                    const opponentChange = opponentCoinPrice.percentageChange;
+                    const winner = creatorChange >= opponentChange ? 'creator' : 'opponent';
+
+                    // Auto-finish the match in the background (only if match has been running)
+                    const currentPrices = getCurrentPrices(prices);
+                    const hasStartTime = match?.start_time;
+                    const matchDuration = hasStartTime ? Date.now() - new Date(match.start_time || '').getTime() : 0;
+                    const shouldAutoFinish = matchDuration > 5000; // Match must have run for at least 5 seconds
+
+                    if (currentPrices && currentPrices.creator > 0 && currentPrices.opponent > 0 && shouldAutoFinish) {
+                      // Only finish once
+                      setTimeout(() => {
+                        finishMatch(currentPrices.creator, currentPrices.opponent)
+                          .then((result) => {
+                            console.log('🏆 Auto-finished match successfully:', result);
+                          })
+                          .catch((error) => {
+                            console.error('❌ Auto-finish failed:', error);
+                          });
+                      }, 100); // Small delay to prevent multiple calls
+                    }
+
+                    return (
+                      <Card className="border-green-500 bg-green-50 dark:bg-green-900/20">
+                        <CardHeader>
+                          <CardTitle className="text-green-700 dark:text-green-300 text-center">
+                            🏁 TIME'S UP! DECLARING WINNER! 🏁
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-center space-y-4">
+                          <div className="text-2xl font-bold text-green-800 dark:text-green-200 mb-4">
+                            🎉 {winner === 'creator' ?
+                              `${match.creator_coin} WINS!` :
+                              `${match.opponent_coin} WINS!`
+                            } 🎉
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className={`p-4 rounded-lg border-2 ${
+                              winner === 'creator'
+                                ? 'bg-green-100 border-green-500 dark:bg-green-900/40'
+                                : 'bg-gray-100 border-gray-300 dark:bg-gray-900/40'
+                            }`}>
+                              <div className="font-bold">{match.creator_coin} (Creator)</div>
+                              <div className={`font-bold text-lg ${
+                                creatorChange >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {creatorChange >= 0 ? '+' : ''}{creatorChange.toFixed(4)}%
+                              </div>
+                              {winner === 'creator' && (
+                                <div className="text-sm font-bold text-green-600 mt-1">WINNER! 🏆</div>
+                              )}
+                            </div>
+                            <div className={`p-4 rounded-lg border-2 ${
+                              winner === 'opponent'
+                                ? 'bg-green-100 border-green-500 dark:bg-green-900/40'
+                                : 'bg-gray-100 border-gray-300 dark:bg-gray-900/40'
+                            }`}>
+                              <div className="font-bold">{match.opponent_coin} (Opponent)</div>
+                              <div className={`font-bold text-lg ${
+                                opponentChange >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {opponentChange >= 0 ? '+' : ''}{opponentChange.toFixed(4)}%
+                              </div>
+                              {winner === 'opponent' && (
+                                <div className="text-sm font-bold text-green-600 mt-1">WINNER! 🏆</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm text-green-600 dark:text-green-400">
+                            Match finishing automatically...
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  return null; // Don't show anything if no price data
+                })()}
               </div>
             )}
 
 
             {/* Match Results */}
             {isFinished && match && matchStats && (
-              <Card className="border-yellow-500 bg-gradient-to-r from-yellow-100 to-yellow-200 dark:from-yellow-900/40 dark:to-yellow-800/40">
+              <Card className="border-green-500 bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/40 dark:to-green-800/40">
             <CardHeader>
-                  <CardTitle className="text-center text-2xl text-warning-readable">
+                  <CardTitle className="text-center text-2xl text-green-800 dark:text-green-200">
                     🏆 MATCH FINISHED! 🏆
                   </CardTitle>
             </CardHeader>
             <CardContent>
-                  <div className="text-center space-y-4">
-                    {matchStats.winner === 'tie' ? (
-                      <div>
-                        <h3 className="text-xl font-bold">It's a Tie!</h3>
-                        <p>Both players had the same performance</p>
-                </div>
-                    ) : (
-                      <div>
-                        <h3 className="text-xl font-bold">
-                          {matchStats.winner === 'creator' ?
-                            (userRole === 'creator' ? 'You Win!' : 'Creator Wins!') :
-                            (userRole === 'opponent' ? 'You Win!' : 'Opponent Wins!')
-                          }
-                </h3>
-                        <div className="grid grid-cols-2 gap-4 mt-6">
-                          {/* Creator Result */}
-                          <div className={cn(
-                            "p-6 rounded-lg relative overflow-hidden",
-                            matchStats.winner === 'creator' ?
-                              'bg-green-100 dark:bg-green-900/40 border-2 border-green-500 ring-4 ring-green-200 dark:ring-green-800' :
-                              'bg-red-100 dark:bg-red-900/40 border-2 border-red-500'
-                          )}>
-                            {matchStats.winner === 'creator' && (
-                              <div className="absolute top-2 right-2 text-2xl animate-bounce">
-                                🏆
-                              </div>
-                            )}
-                            <div className="flex items-center gap-3 mb-3">
-                              <img
-                                src={getUserAvatar(match.creator_wallet || '')}
-                                alt="Creator avatar"
-                                className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
-                              />
-                              <div>
-                                <div className="text-sm font-semibold text-muted-foreground">Creator</div>
-                                <div className="text-xs">{shortenAddress(match.creator_wallet || '')}</div>
-                              </div>
-                            </div>
-                            <div className={cn(
-                              "text-lg font-bold mb-1",
-                              matchStats.winner === 'creator' ? 'text-success-readable' : 'text-error-readable'
-                            )}>{match.creator_coin}</div>
-                            <div className={cn(
-                              "text-3xl font-bold",
-                              matchStats.winner === 'creator' ? 'text-success-readable' : 'text-error-readable'
-                            )}>
-                              {matchStats.creatorChange >= 0 ? '+' : ''}{matchStats.creatorChange.toFixed(4)}%
-                            </div>
-                          </div>
+                  <div className="text-center space-y-6">
+                    <div>
+                      <h3 className="text-3xl font-bold text-green-800 dark:text-green-200 mb-2">
+                        {matchStats.winner === 'creator' ?
+                          (userRole === 'creator' ? '🎉 YOU WIN! 🎉' : '🏆 CREATOR WINS! 🏆') :
+                          (userRole === 'opponent' ? '🎉 YOU WIN! 🎉' : '🏆 OPPONENT WINS! 🏆')
+                        }
+                      </h3>
+                      <p className="text-green-700 dark:text-green-300">
+                        {matchStats.winner === 'creator' ?
+                          `${match.creator_coin} outperformed ${match.opponent_coin}!` :
+                          `${match.opponent_coin} outperformed ${match.creator_coin}!`
+                        }
+                      </p>
+                    </div>
 
-                          {/* Opponent Result */}
-                          <div className={cn(
-                            "p-6 rounded-lg relative overflow-hidden",
-                            matchStats.winner === 'opponent' ?
-                              'bg-green-100 dark:bg-green-900/40 border-2 border-green-500 ring-4 ring-green-200 dark:ring-green-800' :
-                              'bg-red-100 dark:bg-red-900/40 border-2 border-red-500'
-                          )}>
-                            {matchStats.winner === 'opponent' && (
-                              <div className="absolute top-2 right-2 text-2xl animate-bounce">
-                                🏆
-                              </div>
-                            )}
-                            <div className="flex items-center gap-3 mb-3">
-                              <img
-                                src={getUserAvatar(match.opponent_wallet || '')}
-                                alt="Opponent avatar"
-                                className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
-                              />
-                              <div>
-                                <div className="text-sm font-semibold text-muted-foreground">Opponent</div>
-                                <div className="text-xs">{shortenAddress(match.opponent_wallet || '')}</div>
-                              </div>
-                            </div>
-                            <div className={cn(
-                              "text-lg font-bold mb-1",
-                              matchStats.winner === 'opponent' ? 'text-success-readable' : 'text-error-readable'
-                            )}>{match.opponent_coin}</div>
-                            <div className={cn(
-                              "text-3xl font-bold",
-                              matchStats.winner === 'opponent' ? 'text-success-readable' : 'text-error-readable'
-                            )}>
-                              {matchStats.opponentChange >= 0 ? '+' : ''}{matchStats.opponentChange.toFixed(4)}%
-                            </div>
-                          </div>
-                        </div>
+                    {/* Claim Money Button for Winner */}
+                    {((matchStats.winner === 'creator' && userRole === 'creator') ||
+                      (matchStats.winner === 'opponent' && userRole === 'opponent')) && (
+                      <div className="space-y-3">
+                        <Button
+                          className="bg-green-600 hover:bg-green-700 text-white text-lg py-3 px-8"
+                          size="lg"
+                          onClick={() => {
+                            alert('🎉 Congratulations! Claim functionality coming soon!');
+                          }}
+                        >
+                          💰 CLAIM YOUR WINNINGS! 💰
+                        </Button>
+                        <p className="text-sm text-green-600 dark:text-green-400">
+                          You earned the prize pot for this match!
+                        </p>
                       </div>
                     )}
-                    <Button onClick={resetToMenu} className="mt-4">
+
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                      {/* Creator Result */}
+                      <div className={cn(
+                        "p-6 rounded-lg relative overflow-hidden",
+                        matchStats.winner === 'creator' ?
+                          'bg-green-100 dark:bg-green-900/40 border-2 border-green-500 ring-4 ring-green-200 dark:ring-green-800' :
+                          'bg-gray-100 dark:bg-gray-900/40 border-2 border-gray-400'
+                      )}>
+                        {matchStats.winner === 'creator' && (
+                          <div className="absolute top-2 right-2 text-2xl animate-bounce">
+                            🏆
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 mb-3">
+                          <img
+                            src={getUserDisplayInfo(match.creator_wallet || '').avatar}
+                            alt="Creator avatar"
+                            className="w-10 h-10 rounded-full border-2 border-gray-300"
+                          />
+                          <div>
+                            <div className="font-semibold">{getUserDisplayInfo(match.creator_wallet || '').displayName}</div>
+                            <div className="text-xs text-muted-foreground">Creator</div>
+                          </div>
+                        </div>
+                        <div className={cn(
+                          "text-lg font-bold mb-1",
+                          matchStats.winner === 'creator' ? 'text-green-700' : 'text-gray-600'
+                        )}>{match.creator_coin}</div>
+                        <div className={cn(
+                          "text-3xl font-bold",
+                          matchStats.winner === 'creator' ? 'text-green-700' : 'text-gray-600'
+                        )}>
+                          {matchStats.creatorChange >= 0 ? '+' : ''}{(matchStats.creatorChange || 0).toFixed(4)}%
+                        </div>
+                        {matchStats.winner === 'creator' && (
+                          <div className="text-sm font-bold text-green-600 mt-2">WINNER! 🎉</div>
+                        )}
+                      </div>
+
+                      {/* Opponent Result */}
+                      <div className={cn(
+                        "p-6 rounded-lg relative overflow-hidden",
+                        matchStats.winner === 'opponent' ?
+                          'bg-green-100 dark:bg-green-900/40 border-2 border-green-500 ring-4 ring-green-200 dark:ring-green-800' :
+                          'bg-gray-100 dark:bg-gray-900/40 border-2 border-gray-400'
+                      )}>
+                        {matchStats.winner === 'opponent' && (
+                          <div className="absolute top-2 right-2 text-2xl animate-bounce">
+                            🏆
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 mb-3">
+                          <img
+                            src={getUserDisplayInfo(match.opponent_wallet || '').avatar}
+                            alt="Opponent avatar"
+                            className="w-10 h-10 rounded-full border-2 border-gray-300"
+                          />
+                          <div>
+                            <div className="font-semibold">{getUserDisplayInfo(match.opponent_wallet || '').displayName}</div>
+                            <div className="text-xs text-muted-foreground">Opponent</div>
+                          </div>
+                        </div>
+                        <div className={cn(
+                          "text-lg font-bold mb-1",
+                          matchStats.winner === 'opponent' ? 'text-green-700' : 'text-gray-600'
+                        )}>{match.opponent_coin}</div>
+                        <div className={cn(
+                          "text-3xl font-bold",
+                          matchStats.winner === 'opponent' ? 'text-green-700' : 'text-gray-600'
+                        )}>
+                          {matchStats.opponentChange >= 0 ? '+' : ''}{(matchStats.opponentChange || 0).toFixed(4)}%
+                        </div>
+                        {matchStats.winner === 'opponent' && (
+                          <div className="text-sm font-bold text-green-600 mt-2">WINNER! 🎉</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button onClick={resetToMenu} className="mt-6">
                       Play Again
                     </Button>
-              </div>
+                  </div>
             </CardContent>
           </Card>
         )}
