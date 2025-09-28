@@ -197,7 +197,7 @@ GROUP LEADERBOARD:
 
 ### **Clone & Install**
 ```bash
-git clone https://github.com/your-team/flowyth
+git clone https://github.com/ManishHQ/flowyth
 cd flowyth
 npm install
 ```
